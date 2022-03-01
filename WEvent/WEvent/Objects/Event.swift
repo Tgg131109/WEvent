@@ -19,6 +19,9 @@ class Event {
     var description: String
     var tickets: [[String: Any]]
     var thumbnail: String
+    var status: String?
+    var isFavorite: Bool?
+    var isCreated: Bool?
     
     // Computed properties.
     var image: UIImage {
@@ -41,25 +44,19 @@ class Event {
                     } catch {
                         print("Error: \(error.localizedDescription)")
 
-//                        img = UIImage(named: "news")!
+                        img = UIImage(named: "corner_pattern")!
                     }
                 }
             } else {
-//                img = UIImage(named: "news")!
+                img = UIImage(named: "corner_pattern")!
             }
 
             return img
         }
     }
     
-//    var addressStr: String {
-//        get {
-//            return "\(address[0]), \(address[1])"
-//        }
-//    }
-    
     // Initializer.
-    init(id: String, title: String, date: String, address: String, link:String, description: String, tickets: [[String: Any]], thumbnail: String) {
+    init(id: String, title: String, date: String, address: String, link:String, description: String, tickets: [[String: Any]], thumbnail: String, status: String? = "", isFavorite: Bool? = false, isCreated: Bool? = false) {
         self.id = id
         self.title = title
         self.date = date
@@ -68,6 +65,9 @@ class Event {
         self.description = description
         self.tickets = tickets
         self.thumbnail = thumbnail
+        self.status = status
+        self.isFavorite = isFavorite
+        self.isCreated = isCreated
     }
     
 //    enum CodingKeys: String, CodingKey {

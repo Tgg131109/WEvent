@@ -12,12 +12,15 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
     @IBOutlet weak var resultCountLbl: UILabel!
     @IBOutlet weak var tableView: UITableView!
     
+    var allUserEvents = [Event]()
     var location = ""
     var isSearching = false
     var suggestedSearches = ["music festival", "family friendly events", "car show"]
     var recentSearches = [String]()
     var searchResults = [Event]()
     var selectedEvent: Event?
+    
+    var favoritesDelegate: FavoritesDelegate!
     
     private var searchController: UISearchController {
         let sc = UISearchController(searchResultsController: nil)
@@ -37,6 +40,8 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
 
         navigationItem.searchController = searchController
         
+        favoritesDelegate = FirebaseHelper()
+        allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
         location = CurrentLocation.location
         resultCountLbl.text = recentSearches.isEmpty ? "Suggested Searches" : "Recent Searches"
     }
@@ -175,6 +180,14 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
             cell.eventDateLbl.text = searchResults[indexPath.row].date
             cell.eventTitleLbl.text = searchResults[indexPath.row].title
             cell.eventAddressLbl.text = searchResults[indexPath.row].address
+            cell.favButton.isSelected = allUserEvents.filter({$0.isFavorite == true}).contains(where: {$0.title == searchResults[indexPath.row].title})
+            cell.favButton.tintColor = cell.favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
+            
+            cell.favTapped = {(favButton) in
+                self.favoritesDelegate.setFavorite(event: self.searchResults[indexPath.row], isFav: !favButton.isSelected)
+                favButton.isSelected.toggle()
+                favButton.tintColor = favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
+            }
         } else {
             cell.textLabel?.text = recentSearches.isEmpty ? suggestedSearches[indexPath.row] : recentSearches[indexPath.row]
         }
@@ -210,7 +223,6 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         if let destination = segue.destination as? DetailsViewController {
             // Send selected event and userEvents array to DetailsViewController.
             destination.event = self.selectedEvent
-//            destination.userEvents = self.userEvents
         }
     }
 }

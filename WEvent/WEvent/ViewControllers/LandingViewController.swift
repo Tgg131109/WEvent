@@ -21,7 +21,7 @@ class LandingViewController: UIViewController {
 
         // Check if user is already logged in and retrieve user information from Firebase if so.
         if Auth.auth().currentUser != nil {
-            print("Current User: " + Auth.auth().currentUser!.uid)
+//            print("Current User: " + Auth.auth().currentUser!.uid)
             getCurrentUserData()
         } else {
             goToSignIn()
@@ -39,8 +39,8 @@ class LandingViewController: UIViewController {
         statusLbl.text = "Retrieving user data..."
         docRef.getDocument() { (document, err) in
             if let document = document, document.exists {
-                let dataDescription = document.data().map(String.init(describing:)) ?? "nil"
-                print("Document data: \(dataDescription)")
+//                let dataDescription = document.data().map(String.init(describing:)) ?? "nil"
+//                print("Document data: \(dataDescription)")
                 
                 guard let userData = document.data(),
                       let fName = userData["firstName"] as? String,
@@ -63,8 +63,6 @@ class LandingViewController: UIViewController {
                         print("Error getting documents: \(err)")
                     } else {
                         for document in querySnapshot!.documents {
-                            print("\(document.documentID) => \(document.data())")
-                            
                             let id  = document.documentID
                             let eventData = document.data()
                             guard let title = eventData["title"] as? String,
@@ -73,14 +71,17 @@ class LandingViewController: UIViewController {
                                   let link = eventData["link"] as? String,
                                   let description = eventData["description"] as? String,
                                   let tickets = eventData["tickets"] as? [[String: Any]],
-                                  let thumb = eventData["thumbnail"] as? String
+                                  let thumb = eventData["thumbnail"] as? String,
+                                  let status = eventData["status"] as? String,
+                                  let favorite = eventData["isFavorite"] as? Bool,
+                                  let created = eventData["isCreated"] as? Bool
                             else {
                                 print("There was an error retreiving event data")
                                 return
                             }
                             
                             // Create Event object and add to events array.
-                            events.append(Event(id: id, title: title, date: date, address: address, link: link, description: description, tickets: tickets, thumbnail: thumb))
+                            events.append(Event(id: id, title: title, date: date, address: address, link: link, description: description, tickets: tickets, thumbnail: thumb, status: status, isFavorite: favorite, isCreated: created))
                         }
                     }
                     

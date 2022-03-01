@@ -13,7 +13,10 @@ class CustomTableViewCell: UITableViewCell {
     @IBOutlet weak var eventDateLbl: UILabel!
     @IBOutlet weak var eventTitleLbl: UILabel!
     @IBOutlet weak var eventAddressLbl: UILabel!
+    @IBOutlet weak var favButton: UIButton!
     
+    var favTapped: ((UIButton) -> Void)?
+
     override func awakeFromNib() {
         super.awakeFromNib()
         // Initialization code
@@ -25,4 +28,7 @@ class CustomTableViewCell: UITableViewCell {
         // Configure the view for the selected state
     }
 
+    @IBAction func favBtnTapped(_ sender: UIButton) {
+        favTapped?(sender)
+    }
 }

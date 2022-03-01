@@ -22,7 +22,6 @@
                 </label>
             </subviews>
             <viewLayoutGuide key="safeArea" id="v96-7r-JMe"/>
-            <color key="backgroundColor" systemColor="systemBackgroundColor"/>
             <constraints>
                 <constraint firstItem="hZy-nL-FWb" firstAttribute="leading" secondItem="bLR-Lz-op7" secondAttribute="leading" constant="20" symbolic="YES" id="7L6-Vl-rz5"/>
                 <constraint firstItem="hZy-nL-FWb" firstAttribute="centerY" secondItem="bLR-Lz-op7" secondAttribute="centerY" id="DBv-ck-4yz"/>
@@ -36,9 +35,6 @@
         </view>
     </objects>
     <resources>
-        <systemColor name="systemBackgroundColor">
-            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-        </systemColor>
         <systemColor name="systemGrayColor">
             <color red="0.55686274509803924" green="0.55686274509803924" blue="0.57647058823529407" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </systemColor>

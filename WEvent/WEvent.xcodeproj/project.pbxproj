@@ -39,6 +39,7 @@
 		3A9C2A9B27CD80C20015EAC2 /* LinkLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2A9A27CD80C20015EAC2 /* LinkLabel.swift */; };
 		3A9C2A9F27CD89B80015EAC2 /* CustomTableViewHeader.xib in Resources */ = {isa = PBXBuildFile; fileRef = 3A9C2A9E27CD89B80015EAC2 /* CustomTableViewHeader.xib */; };
 		3A9C2AA127CD8A960015EAC2 /* CustomTableViewHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2AA027CD8A960015EAC2 /* CustomTableViewHeader.swift */; };
+		3A9C2AA327CE84070015EAC2 /* FirebaseHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2AA227CE84070015EAC2 /* FirebaseHelper.swift */; };
 		3AF15AF727C286650042401F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AF15AF627C286650042401F /* AppDelegate.swift */; };
 		3AF15AF927C286650042401F /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AF15AF827C286650042401F /* SceneDelegate.swift */; };
 		3AF15AFB27C286650042401F /* SignInViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AF15AFA27C286650042401F /* SignInViewController.swift */; };
@@ -74,6 +75,7 @@
 		3A9C2A9A27CD80C20015EAC2 /* LinkLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkLabel.swift; sourceTree = "<group>"; };
 		3A9C2A9E27CD89B80015EAC2 /* CustomTableViewHeader.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = CustomTableViewHeader.xib; sourceTree = "<group>"; };
 		3A9C2AA027CD8A960015EAC2 /* CustomTableViewHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTableViewHeader.swift; sourceTree = "<group>"; };
+		3A9C2AA227CE84070015EAC2 /* FirebaseHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseHelper.swift; sourceTree = "<group>"; };
 		3AF15AF327C286650042401F /* WEvent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WEvent.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3AF15AF627C286650042401F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		3AF15AF827C286650042401F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -157,6 +159,14 @@
 			path = SubClasses;
 			sourceTree = "<group>";
 		};
+		3A9C2AA427CE97F40015EAC2 /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+				3A9C2AA227CE84070015EAC2 /* FirebaseHelper.swift */,
+			);
+			path = Helpers;
+			sourceTree = "<group>";
+		};
 		3AF15AEA27C286650042401F = {
 			isa = PBXGroup;
 			children = (
@@ -182,6 +192,7 @@
 				3A20B2BA27C80F270053917C /* CustomCells */,
 				3A20B2AB27C594FD0053917C /* Objects */,
 				3A9C2A9327CD22D70015EAC2 /* SubClasses */,
+				3A9C2AA427CE97F40015EAC2 /* Helpers */,
 				3AF15AFC27C286650042401F /* Main.storyboard */,
 				3A9C2A9E27CD89B80015EAC2 /* CustomTableViewHeader.xib */,
 				3AF15B0227C286670042401F /* Assets.xcassets */,
@@ -279,6 +290,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3A9C2AA327CE84070015EAC2 /* FirebaseHelper.swift in Sources */,
 				3A9C2A9027CC8C340015EAC2 /* ProfileTableViewController.swift in Sources */,
 				3AF15B0127C286650042401F /* WEvent.xcdatamodeld in Sources */,
 				3A9C2A9727CD2BD00015EAC2 /* UpdatePasswordViewController.swift in Sources */,

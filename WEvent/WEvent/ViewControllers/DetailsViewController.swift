@@ -19,16 +19,22 @@ class DetailsViewController: UIViewController {
     @IBOutlet weak var locationLbl: UILabel!
     @IBOutlet weak var mapView: MKMapView!
     @IBOutlet weak var descriptionLbl: UILabel!
+    @IBOutlet weak var stdButtonView: UIView!
     @IBOutlet weak var addButton: UIButton!
     @IBOutlet weak var notGoingButton: UIButton!
     @IBOutlet weak var memoriesButton: UIButton!
+    @IBOutlet weak var shareButton: UIButton!
+    @IBOutlet weak var favButton: UIButton!
+    @IBOutlet weak var pendingButtonView: UIView!
+    @IBOutlet weak var declineButton: UIButton!
+    @IBOutlet weak var acceptButton: UIButton!
     
     let db = Firestore.firestore()
     let docId = Auth.auth().currentUser?.uid
     var docRef: DocumentReference?
     
     var event: Event?
-    var userEvents = [Event]()
+    var allUserEvents = [Event]()
     var eventId = ""
     var eventImgURL = ""
     var eventTitle = ""
@@ -37,11 +43,15 @@ class DetailsViewController: UIViewController {
     var eventLink = ""
     var eventTickets = [[String: Any]]()
     var eventDescription = ""
+    var isFav = Bool()
+    
+    var favoritesDelegate: FavoritesDelegate!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         docRef = db.collection("users").document(docId!)
+        favoritesDelegate = FirebaseHelper()
         
         if event != nil {
             eventId = event!.id
@@ -52,6 +62,7 @@ class DetailsViewController: UIViewController {
             eventLink = event!.link
             eventTickets = event!.tickets
             eventDescription = event!.description
+            isFav = event!.isFavorite!
             
             // Populate fields.
             imageIV.image = event?.image
@@ -82,8 +93,8 @@ class DetailsViewController: UIViewController {
             priceLbl.delegate = self
         }
   
-        userEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
-    
+        allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
+        
         // Set up map.
         mapView.layer.cornerRadius = 10
         
@@ -115,11 +126,26 @@ class DetailsViewController: UIViewController {
     }
     
     override func viewWillAppear(_ animated: Bool) {
-        if userEvents.contains(where: { $0.title == eventTitle }) {
-            // Update visible buttons.
-            addButton.isHidden = true
-            notGoingButton.isHidden = false
-            memoriesButton.isHidden = false
+        let buttonViewToShow = event?.status == "pending" ? pendingButtonView : stdButtonView
+        
+        view.addSubview(buttonViewToShow!)
+        
+        NSLayoutConstraint.activate([
+            buttonViewToShow!.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            buttonViewToShow!.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            buttonViewToShow!.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+        
+        if allUserEvents.contains(where: { $0.title == eventTitle }) {
+            if event?.status != "attending" {
+                // Update visible buttons.
+                addButton.isHidden = true
+                notGoingButton.isHidden = false
+                memoriesButton.isHidden = false
+            }
+            
+            favButton.isSelected = isFav
+            favButton.tintColor = favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
         }
     }
     
@@ -130,24 +156,44 @@ class DetailsViewController: UIViewController {
     @IBAction func addButtonTapped(_ sender: UIButton) {
         // Add event to userEvents array.
         if event != nil && docRef != nil {
-            // Add event to user's events in Firebase.
-            let data: [String: Any] = ["thumbnail": eventImgURL, "title": eventTitle, "date": eventDate, "tickets": eventTickets, "address": eventAddress, "link": eventLink, "description": eventDescription, "status": "attending", "isCreated": false, "isFavorite": false]
-            
-            docRef!.collection("events").addDocument(data: data) { (error) in
-                if let error = error {
-                    print("Error: \(error.localizedDescription)")
-                } else {
-                    self.event?.id = self.docRef!.documentID
-                    
-                    self.userEvents.append(self.event!)
-                    CurrentUser.currentUser?.userEvents = self.userEvents
-                    
-                    // Update visible buttons.
-                    self.addButton.isHidden = true
-                    self.notGoingButton.isHidden = false
-                    self.memoriesButton.isHidden = false
-                    
-                    print("Document added with ID: \(self.docRef!.documentID)")
+            if self.isFav {
+                // Find document in Firebase and update status field.
+                self.docRef!.collection("events").document(self.eventId).updateData(["status": "attending"]) { err in
+                    if let err = err {
+                        print("Error updating document: \(err)")
+                    } else {
+                        // Update event status property and update current user's events to match.
+                        if let index = self.allUserEvents.firstIndex(where: { $0.id == self.eventId }) {
+                            self.allUserEvents[index].status = "attending"
+                            CurrentUser.currentUser?.userEvents = self.allUserEvents
+                            
+                            print("Document successfully updated")
+                        }
+                    }
+                }
+            } else {
+                // Add event to user's events in Firebase.
+                let data: [String: Any] = ["thumbnail": eventImgURL, "title": eventTitle, "date": eventDate, "tickets": eventTickets, "address": eventAddress, "link": eventLink, "description": eventDescription, "status": "attending", "isCreated": false, "isFavorite": false]
+                var ref: DocumentReference?
+                
+                ref = docRef!.collection("events").addDocument(data: data) { (error) in
+                    if let error = error {
+                        print("Error: \(error.localizedDescription)")
+                    } else {
+                        if let id = ref?.documentID {
+                            self.event?.id = id
+                            
+                            self.allUserEvents.append(self.event!)
+                            CurrentUser.currentUser?.userEvents = self.allUserEvents
+                            
+                            // Update visible buttons.
+                            self.addButton.isHidden = true
+                            self.notGoingButton.isHidden = false
+                            self.memoriesButton.isHidden = false
+                            
+                            print("Document added with ID: \(id)")
+                        }
+                    }
                 }
             }
         }
@@ -160,23 +206,39 @@ class DetailsViewController: UIViewController {
         // Add actions to alert controller.
         alert.addAction(UIAlertAction(title: "Keep", style: .cancel, handler: nil))
         alert.addAction(UIAlertAction(title: "Remove", style: .destructive, handler: { action in
-            // Remove event from user's events in Firebase
-            if self.docRef != nil {
-                print(self.eventId)
-                self.docRef!.collection("events").document(self.eventId).delete() { err in
+            if self.isFav {
+                // Find document in Firebase and update status field.
+                self.docRef!.collection("events").document(self.eventId).updateData(["status": ""]) { err in
                     if let err = err {
-                        print("Error removing document: \(err)")
+                        print("Error updating document: \(err)")
                     } else {
-                        // Remove event from userEvents array.
-                        self.userEvents.removeAll(where: { $0.id == self.eventId })
-                        CurrentUser.currentUser?.userEvents = self.userEvents
-                        
-                        // Update visible buttons.
-                        self.addButton.isHidden = false
-                        self.notGoingButton.isHidden = true
-                        self.memoriesButton.isHidden = true
-                        
-                        print("Document successfully removed!")
+                        // Update event status property and update current user's events to match.
+                        if let index = self.allUserEvents.firstIndex(where: { $0.id == self.eventId }) {
+                            self.allUserEvents[index].status = ""
+                            CurrentUser.currentUser?.userEvents = self.allUserEvents
+                            
+                            print("Document successfully updated")
+                        }
+                    }
+                }
+            } else {
+                // Remove event from user's events in Firebase
+                if self.docRef != nil {
+                    self.docRef!.collection("events").document(self.eventId).delete() { err in
+                        if let err = err {
+                            print("Error removing document: \(err)")
+                        } else {
+                            // Remove event from userEvents array.
+                            self.allUserEvents.removeAll(where: { $0.id == self.eventId })
+                            CurrentUser.currentUser?.userEvents = self.allUserEvents
+                            
+                            // Update visible buttons.
+                            self.addButton.isHidden = false
+                            self.notGoingButton.isHidden = true
+                            self.memoriesButton.isHidden = true
+                            
+                            print("Document successfully removed!")
+                        }
                     }
                 }
             }
@@ -184,6 +246,14 @@ class DetailsViewController: UIViewController {
         
         // Show alert.
         self.present(alert, animated: true, completion: nil)
+    }
+    
+    @IBAction func favButtonTapped(_ sender: UIButton) {
+        if event != nil {
+            favoritesDelegate.setFavorite(event: event!, isFav: !favButton.isSelected)
+            favButton.isSelected.toggle()
+            favButton.tintColor = favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
+        }
     }
     
     /*

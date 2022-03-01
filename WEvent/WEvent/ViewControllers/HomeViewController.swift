@@ -7,6 +7,7 @@
 
 import UIKit
 import CoreLocation
+import Firebase
 
 class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     
@@ -14,10 +15,17 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
     
     let manager = CLLocationManager()
     
+    let db = Firestore.firestore()
+    let docId = Auth.auth().currentUser?.uid
+    var docRef: DocumentReference?
+    
     var locationStr = ""
-    var userEvents = [Event]()
+    var allUserEvents = [Event]()
+    var userUpcomingEvents = [Event]()
     var localEvents = [Event]()
     var selectedEvent: Event?
+
+    var favoritesDelegate: FavoritesDelegate!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -26,11 +34,11 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
         
         guard let navigationBar = self.navigationController?.navigationBar else { return }
         navigationBar.addSubview(imageView)
-        //            imageView.layer.cornerRadius = Const.ImageSizeForLargeState / 2
-        //            imageView.clipsToBounds = true
+        
         imageView.tintColor = .label
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFit
+        
         NSLayoutConstraint.activate([
             imageView.leftAnchor.constraint(equalTo: navigationBar.leftAnchor, constant: 175),
             imageView.bottomAnchor.constraint(equalTo: navigationBar.bottomAnchor, constant: -16),
@@ -38,10 +46,11 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
             imageView.widthAnchor.constraint(equalToConstant: 40)
         ])
         
+        docRef = db.collection("users").document(docId!)
+        favoritesDelegate = FirebaseHelper()
         manager.requestWhenInUseAuthorization()
 
         if CLLocationManager.locationServicesEnabled() {
-            print("Services Enabled")
             manager.delegate = self
             manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
             manager.startUpdatingLocation()
@@ -56,7 +65,8 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
     }
     
     override func viewWillAppear(_ animated: Bool) {
-        userEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
+        allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
+        userUpcomingEvents = allUserEvents.filter({$0.status == "attending"})
 
         DispatchQueue.main.async {
             self.tableView.reloadSections(IndexSet([0]), with: .none)
@@ -69,9 +79,6 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let locValue: CLLocationCoordinate2D = manager.location?.coordinate else { return }
-        print("locations = \(locValue.latitude) \(locValue.longitude)")
-        
         let geocoder = CLGeocoder()
         
         geocoder.reverseGeocodeLocation(locations[0]) { (placemarks, error) in
@@ -96,7 +103,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
         }
     }
     
-    func getLocalEvents(loc: String) {
+    private func getLocalEvents(loc: String) {
         // Create default configuration.
         let config = URLSessionConfiguration.default
 
@@ -228,6 +235,15 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
             cell.eventDateLbl.text = localEvents[indexPath.row].date
             cell.eventTitleLbl.text = localEvents[indexPath.row].title
             cell.eventAddressLbl.text = localEvents[indexPath.row].address
+            cell.favButton.isSelected = allUserEvents.filter({$0.isFavorite == true}).contains(where: {$0.title == localEvents[indexPath.row].title})
+            cell.favButton.tintColor = cell.favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
+            
+            cell.favTapped = {(favButton) in
+                self.favoritesDelegate.setFavorite(event: self.localEvents[indexPath.row], isFav: !favButton.isSelected)
+                favButton.isSelected.toggle()
+                favButton.tintColor = favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
+            }
+            
         } else {
             let cell = cell as! CVTableViewCell
             
@@ -236,7 +252,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
 
         return cell
     }
-    
+        
     override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         // Create custom header.
         let header = tableView.dequeueReusableHeaderFooterView(withIdentifier: "header_1") as? CustomTableViewHeader
@@ -256,40 +272,6 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
         self.performSegue(withIdentifier: "goToDetails", sender: self)
     }
     
-    /*
-    // Override to support conditional editing of the table view.
-    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        // Return false if you do not want the specified item to be editable.
-        return true
-    }
-    */
-
-    /*
-    // Override to support editing the table view.
-    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete {
-            // Call trashTapped with optional argument.
-            // Optional argument is used to prevent redundant code.
-            trashTapped(indexP: indexPath.row)
-        }
-    }
-    */
-    
-    /*
-    // Override to support rearranging the table view.
-    override func tableView(_ tableView: UITableView, moveRowAt fromIndexPath: IndexPath, to: IndexPath) {
-
-    }
-    */
-
-    /*
-    // Override to support conditional rearranging of the table view.
-    override func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
-        // Return false if you do not want the item to be re-orderable.
-        return true
-    }
-    */
-    
     // MARK: - CollectionView data source
     
     func numberOfSections(in collectionView: UICollectionView) -> Int {
@@ -297,7 +279,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
     }
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return userEvents.count + 1
+        return userUpcomingEvents.count + 1
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -310,12 +292,12 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
             cell.eventTitleLbl.textColor = UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1)
             cell.eventAddressLbl.isHidden = true
         } else {
-            cell.eventImageIV.image = userEvents[indexPath.row].image
+            cell.eventImageIV.image = userUpcomingEvents[indexPath.row].image
             cell.eventDateLbl.isHidden = false
-            cell.eventDateLbl.text = userEvents[indexPath.row].date
-            cell.eventTitleLbl.text = userEvents[indexPath.row].title
+            cell.eventDateLbl.text = userUpcomingEvents[indexPath.row].date
+            cell.eventTitleLbl.text = userUpcomingEvents[indexPath.row].title
             cell.eventTitleLbl.textColor = .label
-            cell.eventAddressLbl.text = userEvents[indexPath.row].address
+            cell.eventAddressLbl.text = userUpcomingEvents[indexPath.row].address
             cell.eventAddressLbl.isHidden = false
         }
 
@@ -338,7 +320,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
             self.tabBarController?.selectedIndex = 1
         } else {
             // Set selected event to be passed to DetailsViewController
-            selectedEvent = userEvents[indexPath.row]
+            selectedEvent = userUpcomingEvents[indexPath.row]
             
             // Show DetailsViewController.
             self.performSegue(withIdentifier: "goToDetails", sender: self)
@@ -353,7 +335,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
         if let destination = segue.destination as? DetailsViewController {
             // Send selected event and userEvents array to DetailsViewController.
             destination.event = self.selectedEvent
-            destination.userEvents = self.userEvents
+//            destination.userEvents = self.userUpcomingEvents
         }
     }
 }
