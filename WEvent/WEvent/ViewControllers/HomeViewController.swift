@@ -266,8 +266,12 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
         self.tableView.deselectRow(at: indexPath, animated: true)
         
         // Set selected event to be passed to DetailsViewController
-        selectedEvent = localEvents[indexPath.row]
-        
+        if let index = allUserEvents.firstIndex(where: { $0.title == localEvents[indexPath.row].title }) {
+            selectedEvent = allUserEvents[index]
+        } else {
+            selectedEvent = localEvents[indexPath.row]
+        }
+
         // Show DetailsViewController.
         self.performSegue(withIdentifier: "goToDetails", sender: self)
     }

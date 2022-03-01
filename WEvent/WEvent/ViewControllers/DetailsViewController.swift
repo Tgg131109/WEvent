@@ -136,17 +136,15 @@ class DetailsViewController: UIViewController {
             buttonViewToShow!.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         
-        if allUserEvents.contains(where: { $0.title == eventTitle }) {
-            if event?.status != "attending" {
-                // Update visible buttons.
-                addButton.isHidden = true
-                notGoingButton.isHidden = false
-                memoriesButton.isHidden = false
-            }
-            
-            favButton.isSelected = isFav
-            favButton.tintColor = favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
+        if event?.status == "attending" {
+            // Update visible buttons.
+            addButton.isHidden = true
+            notGoingButton.isHidden = false
+            memoriesButton.isHidden = false
         }
+        
+        favButton.isSelected = isFav
+        favButton.tintColor = favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
     }
     
     @IBAction func backTapped(_ sender: UIButton) {

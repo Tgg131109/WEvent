@@ -16,6 +16,7 @@
 		3A20B2B727C7FA130053917C /* HomeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A20B2B627C7FA130053917C /* HomeViewController.swift */; };
 		3A20B2B927C80F0D0053917C /* CustomCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A20B2B827C80F0D0053917C /* CustomCollectionViewCell.swift */; };
 		3A20B2BC27C82C0C0053917C /* CustomTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A20B2BB27C82C0C0053917C /* CustomTableViewCell.swift */; };
+		3A38D92327CED0A1003D7AD2 /* CreateEventViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A38D92227CED0A1003D7AD2 /* CreateEventViewController.swift */; };
 		3A9C2A3927C9512D0015EAC2 /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2A3827C9512D0015EAC2 /* Event.swift */; };
 		3A9C2A3B27C970360015EAC2 /* DetailsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2A3A27C970360015EAC2 /* DetailsViewController.swift */; };
 		3A9C2A3D27C98E0D0015EAC2 /* LandingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2A3C27C98E0D0015EAC2 /* LandingViewController.swift */; };
@@ -60,6 +61,7 @@
 		3A20B2B627C7FA130053917C /* HomeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewController.swift; sourceTree = "<group>"; };
 		3A20B2B827C80F0D0053917C /* CustomCollectionViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomCollectionViewCell.swift; sourceTree = "<group>"; };
 		3A20B2BB27C82C0C0053917C /* CustomTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTableViewCell.swift; sourceTree = "<group>"; };
+		3A38D92227CED0A1003D7AD2 /* CreateEventViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateEventViewController.swift; sourceTree = "<group>"; };
 		3A9C2A3827C9512D0015EAC2 /* Event.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Event.swift; sourceTree = "<group>"; };
 		3A9C2A3A27C970360015EAC2 /* DetailsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailsViewController.swift; sourceTree = "<group>"; };
 		3A9C2A3C27C98E0D0015EAC2 /* LandingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingViewController.swift; sourceTree = "<group>"; };
@@ -123,6 +125,7 @@
 				3A9C2A9127CD0BD60015EAC2 /* UpdateInformationViewController.swift */,
 				3A9C2A9627CD2BD00015EAC2 /* UpdatePasswordViewController.swift */,
 				3A9C2A9827CD6BB20015EAC2 /* FriendsViewController.swift */,
+				3A38D92227CED0A1003D7AD2 /* CreateEventViewController.swift */,
 			);
 			path = ViewControllers;
 			sourceTree = "<group>";
@@ -291,6 +294,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3A9C2AA327CE84070015EAC2 /* FirebaseHelper.swift in Sources */,
+				3A38D92327CED0A1003D7AD2 /* CreateEventViewController.swift in Sources */,
 				3A9C2A9027CC8C340015EAC2 /* ProfileTableViewController.swift in Sources */,
 				3AF15B0127C286650042401F /* WEvent.xcdatamodeld in Sources */,
 				3A9C2A9727CD2BD00015EAC2 /* UpdatePasswordViewController.swift in Sources */,
