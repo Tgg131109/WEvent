@@ -18,8 +18,7 @@ class SignUpViewController: UIViewController, UIImagePickerControllerDelegate, U
     @IBOutlet weak var passwordTF: CustomTextField!
     @IBOutlet weak var password2TF: CustomTextField!
     @IBOutlet weak var signInBtn: UIButton!
-    @IBOutlet weak var activityView: UIView!
-    @IBOutlet weak var activityInd: UIActivityIndicatorView!
+    @IBOutlet weak var activityView: CustomActivityIndicatorView!
     
     var imagePicker = UIImagePickerController()
     var imageData: Data?
@@ -91,7 +90,7 @@ class SignUpViewController: UIViewController, UIImagePickerControllerDelegate, U
             return
         }
         
-        activityInd.startAnimating()
+        activityView.activityIndicator.startAnimating()
         activityView.isHidden = false
         
         let addDate = Date()
@@ -151,7 +150,7 @@ class SignUpViewController: UIViewController, UIImagePickerControllerDelegate, U
                                             self.performSegue(withIdentifier: "goToSuccess", sender: self)
                                             
                                             self.activityView.isHidden = true
-                                            self.activityInd.stopAnimating()
+                                            self.activityView.activityIndicator.stopAnimating()
                                         } else {
                                             // Print error if update fails.
                                             print(error!.localizedDescription)
@@ -170,7 +169,7 @@ class SignUpViewController: UIViewController, UIImagePickerControllerDelegate, U
     }
 
     @IBAction func setPicture(_ sender: UIButton) {
-        if UIImagePickerController.isSourceTypeAvailable(.photoLibrary){
+        if UIImagePickerController.isSourceTypeAvailable(.photoLibrary) {
             imagePicker.delegate = self
             imagePicker.sourceType = .photoLibrary
             imagePicker.allowsEditing = false
@@ -187,17 +186,5 @@ class SignUpViewController: UIViewController, UIImagePickerControllerDelegate, U
             
             picIV.image = image
         }
-
     }
-    
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destination.
-        // Pass the selected object to the new view controller.
-    }
-    */
-
 }

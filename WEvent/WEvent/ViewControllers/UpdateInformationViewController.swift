@@ -17,8 +17,7 @@ class UpdateInformationViewController: UIViewController, UIImagePickerController
     @IBOutlet weak var emailTF: CustomTextField!
     @IBOutlet weak var passwordTF: CustomTextField!
     @IBOutlet weak var saveBtn: UIButton!
-    @IBOutlet weak var activityView: UIView!
-    @IBOutlet weak var activityInd: UIActivityIndicatorView!
+    @IBOutlet weak var activityView: CustomActivityIndicatorView!
     
     var imagePicker = UIImagePickerController()
     var imageData: Data?
@@ -51,7 +50,7 @@ class UpdateInformationViewController: UIViewController, UIImagePickerController
         // Ensure required fields are not empty.
         guard let fName = fNameTF.text, !fName.isEmpty,
               let lName = lNameTF.text, !lName.isEmpty,
-              let email = emailTF.text,!email.isEmpty
+              let email = emailTF.text, !email.isEmpty
         else {
             // Set alert title and message.
             alert.title = "Missing Info"
@@ -83,12 +82,12 @@ class UpdateInformationViewController: UIViewController, UIImagePickerController
             self.present(alert, animated: true, completion: nil)
             
             self.activityView.isHidden = true
-            self.activityInd.stopAnimating()
+            self.activityView.activityIndicator.stopAnimating()
             
             return
         }
         
-        self.activityInd.startAnimating()
+        self.activityView.activityIndicator.startAnimating()
         self.activityView.isHidden = false
         
         // Reauthenticate user.
@@ -107,7 +106,7 @@ class UpdateInformationViewController: UIViewController, UIImagePickerController
                 self.present(alert, animated: true, completion: nil)
                 
                 self.activityView.isHidden = true
-                self.activityInd.stopAnimating()
+                self.activityView.activityIndicator.stopAnimating()
                 
                 return
             }
@@ -125,7 +124,7 @@ class UpdateInformationViewController: UIViewController, UIImagePickerController
                     self.present(alert, animated: true, completion: nil)
                     
                     self.activityView.isHidden = true
-                    self.activityInd.stopAnimating()
+                    self.activityView.activityIndicator.stopAnimating()
                     
                     return
                 }
@@ -140,14 +139,13 @@ class UpdateInformationViewController: UIViewController, UIImagePickerController
                     } else {
                         print("Document successfully updated")
                         
-
                         // Create alert to notify user of successful update.
                         let successAlert = UIAlertController(title: "Success", message: "Account information successfully updated.", preferredStyle: .alert)
                         
                         // Add action to successAlert controller.
                         successAlert.addAction(UIAlertAction(title: "OK", style: .default, handler: { action in
                             self.activityView.isHidden = true
-                            self.activityInd.stopAnimating()
+                            self.activityView.activityIndicator.stopAnimating()
                             self.dismiss(animated: true, completion: nil)
                         }))
                         
@@ -201,7 +199,7 @@ class UpdateInformationViewController: UIViewController, UIImagePickerController
     }
     
     @IBAction func setPicture(_ sender: UIButton) {
-        if UIImagePickerController.isSourceTypeAvailable(.photoLibrary){
+        if UIImagePickerController.isSourceTypeAvailable(.photoLibrary) {
             imagePicker.delegate = self
             imagePicker.sourceType = .photoLibrary
             imagePicker.allowsEditing = false
@@ -214,21 +212,12 @@ class UpdateInformationViewController: UIViewController, UIImagePickerController
         picker.dismiss(animated: true, completion: nil)
         
         if let image = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
-            imageData = image.pngData()
+            // Resize image
+            let targetSize = CGSize(width: 100, height: 100)
+            let scaledImg = image.scalePreservingAspectRatio(targetSize: targetSize)
             
-            picIV.image = image
+            imageData = scaledImg.pngData()
+            picIV.image = scaledImg
         }
-
     }
-
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destination.
-        // Pass the selected object to the new view controller.
-    }
-    */
-
 }

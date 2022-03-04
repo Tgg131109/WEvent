@@ -11,7 +11,7 @@ import Firebase
 
 class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     
-    private let imageView = UIImageView(image: UIImage(named: "logo_stamp"))
+    private let navIconIV = UIImageView(image: UIImage(named: "logo_stamp"))
     
     let manager = CLLocationManager()
     
@@ -24,30 +24,73 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
     var userUpcomingEvents = [Event]()
     var localEvents = [Event]()
     var selectedEvent: Event?
-
+    var editEvent = false
+    var updateCV = false
+    
     var favoritesDelegate: FavoritesDelegate!
+    var getImageDelegate: GetImageDelegate!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         navigationController?.navigationBar.prefersLargeTitles = true
         
+        // Add icon to navigation bar and configure for scroll animation.
         guard let navigationBar = self.navigationController?.navigationBar else { return }
-        navigationBar.addSubview(imageView)
+        navigationBar.addSubview(navIconIV)
         
-        imageView.tintColor = .label
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.contentMode = .scaleAspectFit
+        navIconIV.tintColor = .label
+        navIconIV.translatesAutoresizingMaskIntoConstraints = false
+        navIconIV.contentMode = .scaleAspectFit
         
         NSLayoutConstraint.activate([
-            imageView.leftAnchor.constraint(equalTo: navigationBar.leftAnchor, constant: 175),
-            imageView.bottomAnchor.constraint(equalTo: navigationBar.bottomAnchor, constant: -16),
-            imageView.heightAnchor.constraint(equalToConstant: 30),
-            imageView.widthAnchor.constraint(equalToConstant: 40)
+            navIconIV.leftAnchor.constraint(equalTo: navigationBar.leftAnchor, constant: 175),
+            navIconIV.bottomAnchor.constraint(equalTo: navigationBar.bottomAnchor, constant: -16),
+            navIconIV.heightAnchor.constraint(equalToConstant: 30),
+            navIconIV.widthAnchor.constraint(equalToConstant: 40)
         ])
         
         docRef = db.collection("users").document(docId!)
         favoritesDelegate = FirebaseHelper()
+        getImageDelegate = GetImageHelper()
+        
+        getUserLocation()
+        
+        // Register CustomTableViewHeader xib.
+        let headerNib = UINib.init(nibName: "CustomTableViewHeader", bundle: nil)
+        tableView.register(headerNib, forHeaderFooterViewReuseIdentifier: "header_1")
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        print("will appear")
+        if !editEvent {
+            let currentEventCount = allUserEvents.count
+            let actualEventCount = CurrentUser.currentUser?.userEvents?.count
+
+            allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
+            userUpcomingEvents = allUserEvents.filter({$0.status == "attending"})
+
+            // Reload tableView collectionView if events have been added or removed.
+            if currentEventCount != actualEventCount || updateCV {
+                print("Update")
+                DispatchQueue.main.async {
+                    self.tableView.reloadSections(IndexSet([0]), with: .none)
+                }
+            }
+        } else {
+            editEvent = false
+            
+            // Show CreateEventViewController.
+            self.performSegue(withIdentifier: "goToEdit", sender: self)
+        }
+    }
+    
+    override func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard let height = navigationController?.navigationBar.frame.height else { return }
+        moveAndResizeNavImage(for: height)
+    }
+    
+    private func getUserLocation() {
         manager.requestWhenInUseAuthorization()
 
         if CLLocationManager.locationServicesEnabled() {
@@ -58,24 +101,6 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
             // Alert user that they need to enable location services.
             print("Services Disabled")
         }
-        
-        // Register xib.
-        let headerNib = UINib.init(nibName: "CustomTableViewHeader", bundle: nil)
-        tableView.register(headerNib, forHeaderFooterViewReuseIdentifier: "header_1")
-    }
-    
-    override func viewWillAppear(_ animated: Bool) {
-        allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
-        userUpcomingEvents = allUserEvents.filter({$0.status == "attending"})
-
-        DispatchQueue.main.async {
-            self.tableView.reloadSections(IndexSet([0]), with: .none)
-        }
-    }
-    
-    override func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        guard let height = navigationController?.navigationBar.frame.height else { return }
-        moveAndResizeNavImage(for: height)
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
@@ -134,13 +159,13 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                     print("JSON object creation failed.")
                     return
                 }
-                // Create Subreddit object.
+                // Create Event object.
                 do {
                     // Create json Object from downloaded data above and cast as [String: Any].
                     if let jsonObj = try JSONSerialization.jsonObject(with: validData, options: .mutableContainers) as? [String: Any] {
                         guard let data = jsonObj["events_results"] as? [[String: Any]]
                         else {
-                            print("This isn't working")
+                            print("The data cannot be found")
                             return
                         }
                         
@@ -152,7 +177,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                                   let link = event["link"] as? String,
                                   let description = event["description"] as? String,
                                   let tickets = event["ticket_info"] as? [[String: Any]],
-                                  let thumbnail = event["thumbnail"] as? String
+                                  let imageUrl = event["thumbnail"] as? String
                             else {
                                 print("There was an error with this event's data")
                                 
@@ -162,14 +187,15 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                             guard let start = date["start_date"] as? String,
                                   let when = date["when"] as? String
                             else {
-                                print("This isn't working")
+                                print("Date data cannot be found")
                                 return
                             }
                             
                             let dateStr = "\(start) | \(when)"
                             let addressStr = "\(address[0]), \(address[1])"
+                            let eventImage = self.getImageDelegate.getImageFromUrl(imageUrl: imageUrl)
 
-                            self.localEvents.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, thumbnail: thumbnail))
+                            self.localEvents.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage))
                         }
                     }
                 }
@@ -209,7 +235,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
 
         let xTranslation = max(0, sizeDiff - coeff * sizeDiff)
         
-        imageView.transform = CGAffineTransform.identity
+        navIconIV.transform = CGAffineTransform.identity
             .scaledBy(x: scale, y: scale)
             .translatedBy(x: xTranslation * 11, y: yTranslation)
     }
@@ -219,35 +245,39 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
     override func numberOfSections(in tableView: UITableView) -> Int {
         return 2
     }
-
+    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return section == 0 ? 1 : localEvents.count
     }
-
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: indexPath.section == 0 ? "table_cell_1" : "table_cell_2", for: indexPath)
 
         if indexPath.section != 0 {
             let cell = cell as! CustomTableViewCell
+            let event = localEvents[indexPath.row]
             
             cell.eventImageIV.layer.cornerRadius = 10
-            cell.eventImageIV.image = localEvents[indexPath.row].image
-            cell.eventDateLbl.text = localEvents[indexPath.row].date
-            cell.eventTitleLbl.text = localEvents[indexPath.row].title
-            cell.eventAddressLbl.text = localEvents[indexPath.row].address
-            cell.favButton.isSelected = allUserEvents.filter({$0.isFavorite == true}).contains(where: {$0.title == localEvents[indexPath.row].title})
+            cell.eventImageIV.image = event.image
+            cell.eventDateLbl.text = event.date
+            cell.eventTitleLbl.text = event.title
+            cell.eventAddressLbl.text = event.address
+            cell.favButton.isSelected = allUserEvents.filter({$0.isFavorite == true}).contains(where: {$0.title == event.title})
             cell.favButton.tintColor = cell.favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
             
             cell.favTapped = {(favButton) in
-                self.favoritesDelegate.setFavorite(event: self.localEvents[indexPath.row], isFav: !favButton.isSelected)
+                self.favoritesDelegate.setFavorite(event: event, isFav: !favButton.isSelected)
                 favButton.isSelected.toggle()
                 favButton.tintColor = favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
             }
-            
         } else {
             let cell = cell as! CVTableViewCell
             
-            cell.collectionView.reloadData()
+            DispatchQueue.main.async {
+                cell.collectionView.reloadData()
+                cell.collectionView.collectionViewLayout.invalidateLayout()
+                cell.collectionView.layoutSubviews()
+            }
         }
 
         return cell
@@ -265,11 +295,15 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
         // Deselect row for animation purposes.
         self.tableView.deselectRow(at: indexPath, animated: true)
         
+        let localEvent = localEvents[indexPath.row]
+        
         // Set selected event to be passed to DetailsViewController
-        if let index = allUserEvents.firstIndex(where: { $0.title == localEvents[indexPath.row].title }) {
+        if let index = allUserEvents.firstIndex(where: { $0.title == localEvent.title }) {
+            // If event is contained in user's events, pass that event instead.
+            // This ensures correct information is shown on DetailsViewController.
             selectedEvent = allUserEvents[index]
         } else {
-            selectedEvent = localEvents[indexPath.row]
+            selectedEvent = localEvent
         }
 
         // Show DetailsViewController.
@@ -288,7 +322,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "coll_cell_1", for: indexPath) as! CustomCollectionViewCell
-
+        
         if indexPath.row == collectionView.numberOfItems(inSection: 0) - 1 {
             cell.eventImageIV.image = UIImage(named: "logo_stamp")
             cell.eventDateLbl.isHidden = true
@@ -296,12 +330,31 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
             cell.eventTitleLbl.textColor = UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1)
             cell.eventAddressLbl.isHidden = true
         } else {
-            cell.eventImageIV.image = userUpcomingEvents[indexPath.row].image
+            let event = userUpcomingEvents[indexPath.row]
+
+            cell.eventImageIV.image = event.image
             cell.eventDateLbl.isHidden = false
-            cell.eventDateLbl.text = userUpcomingEvents[indexPath.row].date
-            cell.eventTitleLbl.text = userUpcomingEvents[indexPath.row].title
+            cell.eventDateLbl.text = event.date
+            
+            if event.isCreated {
+                let title = NSMutableAttributedString(string: "\(event.title) ")
+                let imageAttachment = NSTextAttachment()
+                
+                // Resize image
+                let targetSize = CGSize(width: 20, height: 20)
+                imageAttachment.image = UIImage(named: "logo_stamp")?.scalePreservingAspectRatio(targetSize: targetSize).withTintColor(UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1))
+                
+                let imageStr = NSAttributedString(attachment: imageAttachment)
+                
+                title.append(imageStr)
+                
+                cell.eventTitleLbl.attributedText = title
+            } else {
+                cell.eventTitleLbl.text = event.title
+            }
+            
             cell.eventTitleLbl.textColor = .label
-            cell.eventAddressLbl.text = userUpcomingEvents[indexPath.row].address
+            cell.eventAddressLbl.text = event.address
             cell.eventAddressLbl.isHidden = false
         }
 
@@ -339,7 +392,18 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
         if let destination = segue.destination as? DetailsViewController {
             // Send selected event and userEvents array to DetailsViewController.
             destination.event = self.selectedEvent
-//            destination.userEvents = self.userUpcomingEvents
+            destination.editEvent = {
+                print("Edit event")
+                self.editEvent = true
+            }
+        }
+        
+        if let destination = segue.destination as? CreateEventViewController {
+            destination.event = self.selectedEvent
+            destination.updateCV = {
+                print("Update collection view")
+                self.updateCV = true
+            }
         }
     }
 }

@@ -21,6 +21,7 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
     var selectedEvent: Event?
     
     var favoritesDelegate: FavoritesDelegate!
+    var getImageDelegate: GetImageDelegate!
     
     private var searchController: UISearchController {
         let sc = UISearchController(searchResultsController: nil)
@@ -41,6 +42,8 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         navigationItem.searchController = searchController
         
         favoritesDelegate = FirebaseHelper()
+        getImageDelegate = GetImageHelper()
+        
         allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
         location = CurrentLocation.location
         resultCountLbl.text = recentSearches.isEmpty ? "Suggested Searches" : "Recent Searches"
@@ -122,7 +125,7 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
                                   let link = event["link"] as? String,
                                   let description = event["description"] as? String,
                                   let tickets = event["ticket_info"] as? [[String: Any]],
-                                  let thumbnail = event["thumbnail"] as? String
+                                  let imageUrl = event["thumbnail"] as? String
                             else {
                                 print("There was an error with this event's data")
                                 
@@ -138,8 +141,9 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
                             
                             let dateStr = "\(start) | \(when)"
                             let addressStr = "\(address[0]), \(address[1])"
+                            let eventImage = self.getImageDelegate.getImageFromUrl(imageUrl: imageUrl)
                             
-                            self.searchResults.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, thumbnail: thumbnail))
+                            self.searchResults.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage))
                         }
                     }
                 }

@@ -8,7 +8,7 @@
 import Foundation
 import UIKit
 
-class CustomTextField : UITextField {
+class CustomTextField: UITextField {
     required init?(coder aDecoder: NSCoder) {
         super.init(coder:aDecoder)
         self.layer.cornerRadius = 6
@@ -18,7 +18,7 @@ class CustomTextField : UITextField {
     }
 }
 
-class CustomImageView : UIImageView {
+class CustomImageView: UIImageView {
     required init?(coder aDecoder: NSCoder) {
         super.init(coder:aDecoder)
         self.layer.cornerRadius = self.layer.bounds.height / 2
@@ -27,7 +27,7 @@ class CustomImageView : UIImageView {
     }
 }
 
-class CustomShadowView : UIView {
+class CustomShadowView: UIView {
     required init?(coder aDecoder: NSCoder) {
         super.init(coder:aDecoder)
         self.layer.cornerRadius = self.layer.bounds.height / 2
@@ -38,3 +38,75 @@ class CustomShadowView : UIView {
         self.layer.masksToBounds = false
     }
 }
+
+class CustomActivityIndicatorView: UIView {
+    
+//    @IBOutlet weak var activityIndicator: CustomActivityIndicator!
+    @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
+    @IBOutlet weak var statusLbl: UILabel!
+    
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder:aDecoder)
+        
+        // Create a blur effect to be applied to view when gameOverView is displayed.
+        let blurEffect = UIBlurEffect(style: UIBlurEffect.Style.systemUltraThinMaterial)
+        let blurEffectView = UIVisualEffectView(effect: blurEffect)
+        blurEffectView.frame = self.bounds
+        blurEffectView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        
+        self.insertSubview(blurEffectView, at: 0)
+    }
+}
+
+//class CustomActivityIndicator: UIView {
+//
+//    let icon1 = UIImageView()
+//    let icon2 = UIImageView()
+//    let icon3 = UIImageView()
+//
+//    var icons = [UIImageView]()
+//
+//    required init?(coder aDecoder: NSCoder) {
+//        super.init(coder:aDecoder)
+//
+//        for icon in icons {
+//            icon.image = UIImage(named: "logo_stamp")
+//        }
+//
+//        icons = [icon1, icon2, icon3]
+//    }
+//
+//    func startAnimating() {
+//        var delay: Double = 0
+//
+//        for icon in icons {
+//            animateIcon(icon, delay: delay)
+//            delay += 0.95
+//        }
+//    }
+//
+//    func stopAnimating() {
+//        for icon in icons {
+//            icon.stopAnimating()
+//        }
+//    }
+//
+//    func animateIcon(_ icon: UIImageView, delay: Double) {
+//        UIImageView.animate(withDuration: 0.8, delay: delay, options: .curveLinear, animations: {
+//            icon.alpha = 1
+//            icon.frame = CGRect(x: 35, y: 5, width: 30, height: 30)
+//        }) { (completed) in
+//            UIImageView.animate(withDuration: 0.8, delay: delay, options: .curveLinear, animations: {
+//                icon.frame = CGRect(x: 85, y: 5, width: 30, height: 30)
+//            }) { (completed) in
+//                UIImageView.animate(withDuration: 0.8, delay: delay, options: .curveLinear, animations: {
+//                    icon.alpha = 0
+//                    icon.frame = CGRect(x: 140, y: 5, width: 30, height: 30)
+//                }) { (completed) in
+//                    icon.frame = CGRect(x: -20, y: 5, width: 30, height: 30)
+//                    self.animateIcon(icon, delay: 0)
+//                }
+//            }
+//        }
+//    }
+//}

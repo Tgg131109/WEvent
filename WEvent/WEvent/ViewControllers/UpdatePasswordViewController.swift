@@ -14,8 +14,7 @@ class UpdatePasswordViewController: UIViewController {
     @IBOutlet weak var newPasswordTF: CustomTextField!
     @IBOutlet weak var newPassword2TF: CustomTextField!
     @IBOutlet weak var saveBtn: UIButton!
-    @IBOutlet weak var activityView: UIView!
-    @IBOutlet weak var activityInd: UIActivityIndicatorView!
+    @IBOutlet weak var activityView: CustomActivityIndicatorView!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -40,7 +39,7 @@ class UpdatePasswordViewController: UIViewController {
         // Ensure required fields are not empty.
         guard let password = passwordTF.text, !password.isEmpty,
               let newPassword = newPasswordTF.text, !newPassword.isEmpty,
-              let newPassword2 = newPassword2TF.text,!newPassword2.isEmpty
+              let newPassword2 = newPassword2TF.text, !newPassword2.isEmpty
         else {
             // Set alert title and message.
             alert.title = "Missing Info"
@@ -64,7 +63,7 @@ class UpdatePasswordViewController: UIViewController {
             return
         }
         
-        self.activityInd.startAnimating()
+        self.activityView.activityIndicator.startAnimating()
         self.activityView.isHidden = false
         
         // Reauthenticate user.
@@ -83,7 +82,7 @@ class UpdatePasswordViewController: UIViewController {
                 self.present(alert, animated: true, completion: nil)
                 
                 self.activityView.isHidden = true
-                self.activityInd.stopAnimating()
+                self.activityView.activityIndicator.stopAnimating()
                 
                 return
             }
@@ -101,7 +100,7 @@ class UpdatePasswordViewController: UIViewController {
                     self.present(alert, animated: true, completion: nil)
                     
                     self.activityView.isHidden = true
-                    self.activityInd.stopAnimating()
+                    self.activityView.activityIndicator.stopAnimating()
                     
                     return
                 }
@@ -112,7 +111,7 @@ class UpdatePasswordViewController: UIViewController {
                 // Add action to successAlert controller.
                 successAlert.addAction(UIAlertAction(title: "OK", style: .default, handler: { action in
                     self.activityView.isHidden = true
-                    self.activityInd.stopAnimating()
+                    self.activityView.activityIndicator.stopAnimating()
                     self.dismiss(animated: true, completion: nil)
                 }))
                 
@@ -121,15 +120,4 @@ class UpdatePasswordViewController: UIViewController {
             }
         })
     }
-
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destination.
-        // Pass the selected object to the new view controller.
-    }
-    */
-
 }

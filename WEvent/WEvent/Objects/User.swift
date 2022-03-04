@@ -11,7 +11,6 @@ import UIKit
 class User {
     // Stored properties.
     var profilePic: UIImage?
-//    var profilePic: URL?
     var firstName: String
     var lastName: String
     var email: String
@@ -40,14 +39,4 @@ class User {
         self.userEvents = userEvents
         self.recentSearches = recentSearches
     }
-    
-//    enum CodingKeys: String, CodingKey {
-//        case firstName
-//        case lastName
-//        case email
-//        case addDate
-//        case isInvited
-//        case userEvents
-//        case recentSearches
-//    }
 }
