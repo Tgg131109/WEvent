@@ -8,8 +8,9 @@
 import UIKit
 import MapKit
 import Firebase
+import LinkPresentation
 
-class DetailsViewController: UIViewController {
+class DetailsViewController: UIViewController, UIActivityItemSource {
 
     @IBOutlet weak var backButtonView: UIView!
     @IBOutlet weak var imageIV: UIImageView!
@@ -20,6 +21,17 @@ class DetailsViewController: UIViewController {
     @IBOutlet weak var locationLbl: UILabel!
     @IBOutlet weak var mapView: MKMapView!
     @IBOutlet weak var descriptionLbl: UILabel!
+    @IBOutlet weak var groupLbl: UILabel!
+    @IBOutlet weak var inviteBtn: UIButton!
+    @IBOutlet weak var attendeeIV0: UIImageView!
+    @IBOutlet weak var attendeeIV1: UIImageView!
+    @IBOutlet weak var attendeeIV2: UIImageView!
+    @IBOutlet weak var attendeeIV3: UIImageView!
+    @IBOutlet weak var attendeeIV4: UIImageView!
+    @IBOutlet weak var attendeeIV5: UIImageView!
+    @IBOutlet weak var attendeeIV6: UIImageView!
+    @IBOutlet weak var attendeeIV7: UIImageView!
+    @IBOutlet weak var additonalAttendeesLbl: UILabel!
     @IBOutlet weak var stdButtonView: UIView!
     @IBOutlet weak var addButton: UIButton!
     @IBOutlet weak var notGoingButton: UIButton!
@@ -31,7 +43,7 @@ class DetailsViewController: UIViewController {
     @IBOutlet weak var acceptButton: UIButton!
     
     let db = Firestore.firestore()
-    let docId = Auth.auth().currentUser?.uid
+    let userId = Auth.auth().currentUser?.uid
     var docRef: DocumentReference?
     
     var event: Event?
@@ -44,8 +56,12 @@ class DetailsViewController: UIViewController {
     var eventLink = ""
     var eventTickets = [[String: Any]]()
     var eventDescription = ""
+    var eventGroupId = ""
+    var eventAttendeeIds = [String]()
+    var attendeeIVs = [UIImageView]()
     var isFav = Bool()
     var isCreated = Bool()
+    var metadata: LPLinkMetadata?
     
     var shouldEdit = false
     var editEvent: (() -> Void)?
@@ -56,7 +72,7 @@ class DetailsViewController: UIViewController {
         super.viewDidLoad()
         
         allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
-        docRef = db.collection("users").document(docId!)
+        docRef = db.collection("users").document(userId!)
         favoritesDelegate = FirebaseHelper()
         
         populateFields()
@@ -67,6 +83,8 @@ class DetailsViewController: UIViewController {
     }
     
     override func viewWillAppear(_ animated: Bool) {
+        self.navigationController?.isNavigationBarHidden = true
+        
         let buttonViewToShow = event?.status == "pending" ? pendingButtonView : stdButtonView
         
         view.addSubview(buttonViewToShow!)
@@ -102,6 +120,7 @@ class DetailsViewController: UIViewController {
     @IBAction func addButtonTapped(_ sender: UIButton) {
         // Add event to userEvents array.
         if event != nil && docRef != nil {
+            // Action if event is already saved as a favorite.
             if self.isFav {
                 // Find document in Firebase and update status field.
                 self.docRef!.collection("events").document(self.eventId).updateData(["status": "attending"]) { err in
@@ -111,6 +130,9 @@ class DetailsViewController: UIViewController {
                         // Update event status property and update current user's events to match.
                         if let index = self.allUserEvents.firstIndex(where: { $0.id == self.eventId }) {
                             self.allUserEvents[index].status = "attending"
+                            self.allUserEvents[index].groupId = self.userId!
+                            self.allUserEvents[index].attendeeIds = [self.userId!]
+                            
                             CurrentUser.currentUser?.userEvents = self.allUserEvents
                             
                             print("Document successfully updated")
@@ -119,7 +141,7 @@ class DetailsViewController: UIViewController {
                 }
             } else {
                 // Add event to user's events in Firebase.
-                let data: [String: Any] = ["thumbnail": eventImgURL, "title": eventTitle, "date": eventDate, "tickets": eventTickets, "address": eventAddress, "link": eventLink, "description": eventDescription, "status": "attending", "isCreated": false, "isFavorite": false]
+                let data: [String: Any] = ["thumbnail": eventImgURL, "title": eventTitle, "date": eventDate, "tickets": eventTickets, "address": eventAddress, "link": eventLink, "description": eventDescription, "groupID": userId!, "attendeeIds": [userId!], "status": "attending", "isCreated": false, "isFavorite": false]
                 var ref: DocumentReference?
                 
                 ref = docRef!.collection("events").addDocument(data: data) { (error) in
@@ -128,7 +150,6 @@ class DetailsViewController: UIViewController {
                     } else {
                         if let id = ref?.documentID {
                             self.event?.id = id
-                            self.event?.status = "attending"
                             
                             self.allUserEvents.append(self.event!)
                             CurrentUser.currentUser?.userEvents = self.allUserEvents
@@ -143,6 +164,14 @@ class DetailsViewController: UIViewController {
                     }
                 }
             }
+            
+            // Update displayed event.
+            self.event?.status = "attending"
+            self.event?.groupId = self.userId!
+            self.event?.attendeeIds = [self.userId!]
+            
+            // Show attendee information.
+            showAttendees()
         }
     }
 
@@ -166,7 +195,7 @@ class DetailsViewController: UIViewController {
             } else {
                 if self.isFav {
                     // Find document in Firebase and update status field.
-                    self.docRef!.collection("events").document(self.eventId).updateData(["status": ""]) { err in
+                    self.docRef!.collection("events").document(self.eventId).updateData(["status": "", "groupId": "", "attendeeIds": [String]()]) { err in
                         if let err = err {
                             print("Error updating document: \(err)")
                         } else {
@@ -183,10 +212,38 @@ class DetailsViewController: UIViewController {
                     self.deleteFirebaseEvent()
                 }
             }
+            
+            // Hide attendee information.
+            self.groupLbl.isHidden = true
+            self.inviteBtn.isHidden = true
+            self.additonalAttendeesLbl.isHidden = true
+            
+            for iv in self.attendeeIVs {
+                if !iv.isHidden {
+                    iv.isHidden = true
+                }
+            }
         }))
         
         // Show alert.
         self.present(alert, animated: true, completion: nil)
+    }
+
+    @IBAction func shareButtonTapped(_ sender: UIButton) {
+        let linkUrl = URL(string: eventLink)
+        
+        LPMetadataProvider().startFetchingMetadata(for: linkUrl!) { linkMetadata, _ in
+            DispatchQueue.main.async {
+                linkMetadata?.iconProvider = NSItemProvider(object: self.imageIV.image!)
+                linkMetadata?.title = self.eventTitle
+                
+                self.metadata = linkMetadata
+                
+                let activityVC = UIActivityViewController(activityItems: [self], applicationActivities: nil)
+                
+                self.present(activityVC, animated: true)
+            }
+        }
     }
     
     @IBAction func favButtonTapped(_ sender: UIButton) {
@@ -207,6 +264,7 @@ class DetailsViewController: UIViewController {
             eventLink = event!.link
             eventTickets = event!.tickets
             eventDescription = event!.description
+            eventGroupId = event!.groupId
             isFav = event!.isFavorite
             isCreated = event!.isCreated
             
@@ -242,6 +300,37 @@ class DetailsViewController: UIViewController {
             } else {
                 if let price = eventTickets[0]["source"] as? String {
                     priceLbl.text = price
+                }
+            }
+            
+            showAttendees()
+        }
+    }
+    
+    private func showAttendees() {
+        eventAttendeeIds = event!.attendeeIds
+        
+        // Display attendees.
+        if !eventAttendeeIds.isEmpty {
+            attendeeIVs = [attendeeIV0, attendeeIV1, attendeeIV2, attendeeIV3, attendeeIV4, attendeeIV5, attendeeIV6, attendeeIV7]
+            groupLbl.isHidden = false
+            
+            if eventGroupId == userId {
+                inviteBtn.isHidden = false
+            }
+            
+            if eventAttendeeIds.count > 8 {
+                additonalAttendeesLbl.isHidden = false
+            }
+            
+            for i in 0...eventAttendeeIds.count - 1 {
+                attendeeIVs[i].layer.borderColor = UIColor.systemBackground.cgColor
+                attendeeIVs[i].isHidden = false
+                
+                if eventAttendeeIds[i] == userId {
+                    attendeeIVs[i].image = CurrentUser.currentUser?.profilePic
+                } else {
+                    attendeeIVs[i].image = CurrentUser.currentUser?.friends?.first(where: { $0.id == eventAttendeeIds[i] })?.profilePic
                 }
             }
         }
@@ -301,7 +390,7 @@ class DetailsViewController: UIViewController {
             
             if isCreated {
                 // Delete event image from Firebase Storage.
-                let storageRef = Storage.storage().reference().child("users").child(docId!).child("events").child(eventId).child("thumbnail.png")
+                let storageRef = Storage.storage().reference().child("users").child(userId!).child("events").child(eventId).child("thumbnail.png")
                 
                 storageRef.delete { err in
                     if let err = err {
@@ -314,6 +403,21 @@ class DetailsViewController: UIViewController {
         }
     }
     
+    func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
+        return eventTitle
+    }
+    
+    // The item we want the user to act on.
+    // In this case, it's the URL to the Wikipedia page
+    func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
+        return self.metadata?.url
+    }
+    
+    // The metadata we want the system to represent as a rich link
+    func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
+        return self.metadata
+    }
+        
     // MARK: - Navigation
 
     // In a storyboard-based application, you will often want to do a little preparation before navigation
@@ -322,6 +426,14 @@ class DetailsViewController: UIViewController {
         if let destination = segue.destination as? CreateEventViewController {
             // Send selected event and userEvents array to DetailsViewController.
             destination.event = self.event
+        }
+        
+        if let destination = segue.destination as? MemoriesViewController {
+            // Send selected event and userEvents array to DetailsViewController.
+            destination.eventId = self.eventId
+            destination.eventTitle = self.eventTitle
+            destination.eventGroupId = self.eventGroupId
+            destination.eventAttendeeIds = self.eventAttendeeIds
         }
     }
 }

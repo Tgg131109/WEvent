@@ -20,12 +20,14 @@ class Event {
     var tickets: [[String: Any]]
     var imageUrl: String
     var image: UIImage
+    var groupId: String
+    var attendeeIds: [String]
     var status: String
     var isFavorite: Bool
     var isCreated: Bool
     
     // Initializer.
-    init(id: String, title: String, date: String, address: String, link:String, description: String, tickets: [[String: Any]], imageUrl: String, image: UIImage, status: String? = "", isFavorite: Bool? = false, isCreated: Bool? = false) {
+    init(id: String, title: String, date: String, address: String, link:String, description: String, tickets: [[String: Any]], imageUrl: String, image: UIImage, groupId: String, attendeeIds: [String], status: String? = "", isFavorite: Bool? = false, isCreated: Bool? = false) {
         self.id = id
         self.title = title
         self.date = date
@@ -35,6 +37,8 @@ class Event {
         self.tickets = tickets
         self.imageUrl = imageUrl
         self.image = image
+        self.groupId = groupId
+        self.attendeeIds = attendeeIds
         self.status = status!
         self.isFavorite = isFavorite!
         self.isCreated = isCreated!

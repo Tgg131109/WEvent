@@ -68,11 +68,11 @@ class FirebaseHelper: UserDataDelegate, FavoritesDelegate {
                 return
             }
             
-            let img = UIImage(named: "corner_pattern")!
+            let img = UIImage(named: "logo_stamp")!
             
             if CurrentUser.currentUser == nil {
                 // Set current user.
-                CurrentUser.currentUser = User(profilePic: img, firstName: fName, lastName: lName, email: email, addDate: addDate.dateValue(), friends: [[String: Any]](), userEvents: [Event](), recentSearches: recents)
+                CurrentUser.currentUser = User(profilePic: img, firstName: fName, lastName: lName, email: email, addDate: addDate.dateValue(), friends: [Friend](), userEvents: [Event](), recentSearches: recents)
             } else {
                 // Update current user info.
                 CurrentUser.currentUser?.firstName = fName
@@ -103,6 +103,8 @@ class FirebaseHelper: UserDataDelegate, FavoritesDelegate {
                       let description = eventData["description"] as? String,
                       let tickets = eventData["tickets"] as? [[String: Any]],
                       let imageUrl = eventData["thumbnail"] as? String,
+                      let groupId = eventData["groupId"] as? String,
+                      let attendeeIds = eventData["attendeeIds"] as? [String],
                       let status = eventData["status"] as? String,
                       let favorite = eventData["isFavorite"] as? Bool,
                       let created = eventData["isCreated"] as? Bool
@@ -115,14 +117,14 @@ class FirebaseHelper: UserDataDelegate, FavoritesDelegate {
                 let eventImage = getImageDelegate.getImageFromUrl(imageUrl: imageUrl)
                                                 
                 // Create Event object and add to events array.
-                events.append(Event(id: id, title: title, date: date, address: address, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage, status: status, isFavorite: favorite, isCreated: created))
+                events.append(Event(id: id, title: title, date: date, address: address, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage, groupId: groupId, attendeeIds: attendeeIds, status: status, isFavorite: favorite, isCreated: created))
             }
             
             let img = UIImage(named: "logo_stamp")!
             
             if CurrentUser.currentUser == nil {
                 // Set current user.
-                CurrentUser.currentUser = User(profilePic: img, firstName: "", lastName: "", email: "", addDate: Date(), friends: [[String: Any]](), userEvents: events, recentSearches: [String]())
+                CurrentUser.currentUser = User(profilePic: img, firstName: "", lastName: "", email: "", addDate: Date(), friends: [Friend](), userEvents: events, recentSearches: [String]())
             } else {
                 // Update current user info.
                 CurrentUser.currentUser?.userEvents = events
@@ -133,7 +135,7 @@ class FirebaseHelper: UserDataDelegate, FavoritesDelegate {
     }
     
     func getUserFriends() async throws {
-        var friends = [[String: Any]]()
+        var friends = [Friend]()
         var querySnapshot: QuerySnapshot
         
         do {
@@ -141,8 +143,19 @@ class FirebaseHelper: UserDataDelegate, FavoritesDelegate {
             
             for document in querySnapshot.documents {
                 print("\(document.documentID) => \(document.data())")
+                let userData = document.data()
+                
+                guard let fName = userData["firstName"] as? String,
+                      let lName = userData["lastName"] as? String,
+                      let email = userData["email"] as? String,
+                      let status = userData["status"] as? String
+                else {
+                    print("There was an error setting current user data")
+                    return
+                }
                 
                 // Create User object and add to events array.
+                friends.append(Friend(id: document.documentID, profilePic: UIImage(named: "logo_stamp")!, firstName: fName, lastName: lName, email: email, status: status))
             }
             
             let img = UIImage(named: "corner_pattern")!
@@ -154,6 +167,11 @@ class FirebaseHelper: UserDataDelegate, FavoritesDelegate {
                 // Update current user info.
                 CurrentUser.currentUser?.friends = friends
             }
+            
+            // Retrieve each friend's profile picture.
+            for friend in friends {
+                getFriendProfilePic(docId: friend.id)
+            }
         } catch {
             print("There was an error retreiving user friends")
         }
@@ -162,32 +180,49 @@ class FirebaseHelper: UserDataDelegate, FavoritesDelegate {
     func getUserProfilePic() {
         let profilePic = Auth.auth().currentUser?.photoURL
 
-        var img = UIImage()
+        var img = UIImage(named: "corner_pattern")!
 
         if profilePic != nil {
             do {
                 img = UIImage(data: try Data.init(contentsOf: profilePic!))!
             } catch {
                 print("Error: \(error.localizedDescription)")
-
-                img = UIImage(named: "corner_pattern")!
             }
-        } else {
-            img = UIImage(named: "corner_pattern")!
         }
 
         if CurrentUser.currentUser == nil {
             // Set current user.
-            CurrentUser.currentUser = User(profilePic: img, firstName: "", lastName: "", email: "", addDate: Date(), friends: [[String: Any]](), userEvents: [Event](), recentSearches: [String]())
+            CurrentUser.currentUser = User(profilePic: img, firstName: "", lastName: "", email: "", addDate: Date(), friends: [Friend](), userEvents: [Event](), recentSearches: [String]())
         } else {
             // Update current user info.
             CurrentUser.currentUser?.profilePic = img
         }
     }
     
+    func getFriendProfilePic(docId: String) {
+        // Get user image.
+        let storageRef = Storage.storage().reference().child("users").child(docId).child("profile.png")
+        
+        storageRef.downloadURL { url, error in
+            if let error = error {
+                // Handle any errors
+                print("There was an error: \(error)")
+            } else {
+                if let url = url {
+                    // Get the download URL.
+                    do {
+                        CurrentUser.currentUser?.friends?.first(where: { $0.id == docId})?.profilePic = UIImage(data: try Data.init(contentsOf: url))
+                    } catch {
+                        print("Error: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+    }
+    
     func setFavorite(event: Event, isFav: Bool) {
         docRef = db.collection("users").document(docId!)
-        
+
         if docRef != nil {
             // Check if event is in allUserEvents array.
             if let index = allUserEvents.firstIndex(where: { $0.title == event.title }) {
@@ -220,7 +255,7 @@ class FirebaseHelper: UserDataDelegate, FavoritesDelegate {
                 }
             } else {
                 // Add event to user's events in Firebase.
-                let data: [String: Any] = ["thumbnail": event.imageUrl, "title": event.title, "date": event.date, "tickets": event.tickets, "address": event.address, "link": event.link, "description": event.description, "status": "", "isCreated": false, "isFavorite": true]
+                let data: [String: Any] = ["thumbnail": event.imageUrl, "title": event.title, "date": event.date, "tickets": event.tickets, "address": event.address, "link": event.link, "description": event.description, "groupId": "", "attendeeIds": [String](), "status": "", "isCreated": false, "isFavorite": true]
                 
                 var ref: DocumentReference?
                 

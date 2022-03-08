@@ -32,3 +32,56 @@ class CustomTableViewCell: UITableViewCell {
         favTapped?(sender)
     }
 }
+
+class CVTableViewCell: UITableViewCell {
+
+    @IBOutlet weak var collectionView: UICollectionView!
+    
+    override func awakeFromNib() {
+        super.awakeFromNib()
+        // Initialization code
+    }
+
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        super.setSelected(selected, animated: animated)
+
+        // Configure the view for the selected state
+    }
+}
+
+class FriendTableViewCell: UITableViewCell {
+
+    @IBOutlet weak var userImageIV: CustomImageView!
+    @IBOutlet weak var userNameLbl: UILabel!
+    @IBOutlet weak var userEmailLbl: UILabel!
+    @IBOutlet weak var pendingLbl: UILabel!
+    @IBOutlet weak var checkButton: UIButton!
+    @IBOutlet weak var declineButton: UIButton!
+    @IBOutlet weak var acceptButton: UIButton!
+    
+    var checkTapped: ((UIButton) -> Void)?
+    var responseTapped: ((String) -> Void)?
+
+    override func awakeFromNib() {
+        super.awakeFromNib()
+        // Initialization code
+    }
+
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        super.setSelected(selected, animated: animated)
+
+        // Configure the view for the selected state
+    }
+
+    @IBAction func checkBtnTapped(_ sender: UIButton) {
+        checkTapped?(sender)
+    }
+    
+    @IBAction func declineBtnTapped(_ sender: UIButton) {
+        responseTapped?("declined")
+    }
+    
+    @IBAction func acceptBtnTapped(_ sender: UIButton) {
+        responseTapped?("accepted")
+    }
+}

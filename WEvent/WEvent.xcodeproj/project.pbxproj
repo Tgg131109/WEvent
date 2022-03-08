@@ -19,13 +19,19 @@
 		3A38D92327CED0A1003D7AD2 /* CreateEventViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A38D92227CED0A1003D7AD2 /* CreateEventViewController.swift */; };
 		3A38D92527CFD150003D7AD2 /* MediaStorageHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A38D92427CFD150003D7AD2 /* MediaStorageHelper.swift */; };
 		3A38D92727CFDF03003D7AD2 /* ImageHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A38D92627CFDF03003D7AD2 /* ImageHelper.swift */; };
+		3A38D92B27D24043003D7AD2 /* MemoriesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A38D92A27D24043003D7AD2 /* MemoriesViewController.swift */; };
+		3A38D92D27D4264E003D7AD2 /* ImageScrollViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A38D92C27D4264D003D7AD2 /* ImageScrollViewController.swift */; };
+		3A38D93127D4EC7A003D7AD2 /* LocationPreferencesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A38D93027D4EC7A003D7AD2 /* LocationPreferencesViewController.swift */; };
+		3A38D93327D4F5F6003D7AD2 /* zips.json in Resources */ = {isa = PBXBuildFile; fileRef = 3A38D93227D4F5F6003D7AD2 /* zips.json */; };
+		3A38D93527D5035C003D7AD2 /* Location.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A38D93427D5035C003D7AD2 /* Location.swift */; };
+		3A6EAAB027D63E7300D3949C /* AddFriendsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A6EAAAF27D63E7300D3949C /* AddFriendsViewController.swift */; };
+		3A6EAAB227D6404800D3949C /* Friend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A6EAAB127D6404800D3949C /* Friend.swift */; };
 		3A9C2A3927C9512D0015EAC2 /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2A3827C9512D0015EAC2 /* Event.swift */; };
 		3A9C2A3B27C970360015EAC2 /* DetailsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2A3A27C970360015EAC2 /* DetailsViewController.swift */; };
 		3A9C2A3D27C98E0D0015EAC2 /* LandingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2A3C27C98E0D0015EAC2 /* LandingViewController.swift */; };
 		3A9C2A3F27CA9EAE0015EAC2 /* EventAnnotation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2A3E27CA9EAE0015EAC2 /* EventAnnotation.swift */; };
 		3A9C2A4127CAD0CA0015EAC2 /* CurrentLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2A4027CAD0CA0015EAC2 /* CurrentLocation.swift */; };
 		3A9C2A5927CAEFE00015EAC2 /* CurrentUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2A5827CAEFE00015EAC2 /* CurrentUser.swift */; };
-		3A9C2A5B27CC15990015EAC2 /* CVTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2A5A27CC15990015EAC2 /* CVTableViewCell.swift */; };
 		3A9C2A8027CC51E70015EAC2 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 3A9C2A7F27CC51E70015EAC2 /* FirebaseAuth */; };
 		3A9C2A8227CC51E70015EAC2 /* FirebaseAuthCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 3A9C2A8127CC51E70015EAC2 /* FirebaseAuthCombine-Community */; };
 		3A9C2A8427CC51E70015EAC2 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 3A9C2A8327CC51E70015EAC2 /* FirebaseFirestore */; };
@@ -43,12 +49,14 @@
 		3A9C2A9F27CD89B80015EAC2 /* CustomTableViewHeader.xib in Resources */ = {isa = PBXBuildFile; fileRef = 3A9C2A9E27CD89B80015EAC2 /* CustomTableViewHeader.xib */; };
 		3A9C2AA127CD8A960015EAC2 /* CustomTableViewHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2AA027CD8A960015EAC2 /* CustomTableViewHeader.swift */; };
 		3A9C2AA327CE84070015EAC2 /* FirebaseHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C2AA227CE84070015EAC2 /* FirebaseHelper.swift */; };
+		3ABB565227D6DDAA0052C872 /* assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3ABB565127D6DDAA0052C872 /* assets.xcassets */; };
+		3ABB565527D6F96B0052C872 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 3ABB565427D6F96B0052C872 /* Kingfisher */; };
 		3AF15AF727C286650042401F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AF15AF627C286650042401F /* AppDelegate.swift */; };
 		3AF15AF927C286650042401F /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AF15AF827C286650042401F /* SceneDelegate.swift */; };
 		3AF15AFB27C286650042401F /* SignInViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AF15AFA27C286650042401F /* SignInViewController.swift */; };
 		3AF15AFE27C286650042401F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3AF15AFC27C286650042401F /* Main.storyboard */; };
 		3AF15B0127C286650042401F /* WEvent.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 3AF15AFF27C286650042401F /* WEvent.xcdatamodeld */; };
-		3AF15B0327C286670042401F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3AF15B0227C286670042401F /* Assets.xcassets */; };
+		3AF15B0327C286670042401F /* images in Resources */ = {isa = PBXBuildFile; fileRef = 3AF15B0227C286670042401F /* images */; };
 		3AF15B0627C286670042401F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3AF15B0427C286670042401F /* LaunchScreen.storyboard */; };
 		3AF15B0E27C2E5020042401F /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3AF15B0D27C2E5020042401F /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
@@ -66,13 +74,19 @@
 		3A38D92227CED0A1003D7AD2 /* CreateEventViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateEventViewController.swift; sourceTree = "<group>"; };
 		3A38D92427CFD150003D7AD2 /* MediaStorageHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaStorageHelper.swift; sourceTree = "<group>"; };
 		3A38D92627CFDF03003D7AD2 /* ImageHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageHelper.swift; sourceTree = "<group>"; };
+		3A38D92A27D24043003D7AD2 /* MemoriesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoriesViewController.swift; sourceTree = "<group>"; };
+		3A38D92C27D4264D003D7AD2 /* ImageScrollViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageScrollViewController.swift; sourceTree = "<group>"; };
+		3A38D93027D4EC7A003D7AD2 /* LocationPreferencesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPreferencesViewController.swift; sourceTree = "<group>"; };
+		3A38D93227D4F5F6003D7AD2 /* zips.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = zips.json; sourceTree = "<group>"; };
+		3A38D93427D5035C003D7AD2 /* Location.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Location.swift; sourceTree = "<group>"; };
+		3A6EAAAF27D63E7300D3949C /* AddFriendsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFriendsViewController.swift; sourceTree = "<group>"; };
+		3A6EAAB127D6404800D3949C /* Friend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Friend.swift; sourceTree = "<group>"; };
 		3A9C2A3827C9512D0015EAC2 /* Event.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Event.swift; sourceTree = "<group>"; };
 		3A9C2A3A27C970360015EAC2 /* DetailsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailsViewController.swift; sourceTree = "<group>"; };
 		3A9C2A3C27C98E0D0015EAC2 /* LandingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingViewController.swift; sourceTree = "<group>"; };
 		3A9C2A3E27CA9EAE0015EAC2 /* EventAnnotation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventAnnotation.swift; sourceTree = "<group>"; };
 		3A9C2A4027CAD0CA0015EAC2 /* CurrentLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentLocation.swift; sourceTree = "<group>"; };
 		3A9C2A5827CAEFE00015EAC2 /* CurrentUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentUser.swift; sourceTree = "<group>"; };
-		3A9C2A5A27CC15990015EAC2 /* CVTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CVTableViewCell.swift; sourceTree = "<group>"; };
 		3A9C2A8F27CC8C340015EAC2 /* ProfileTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTableViewController.swift; sourceTree = "<group>"; };
 		3A9C2A9127CD0BD60015EAC2 /* UpdateInformationViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateInformationViewController.swift; sourceTree = "<group>"; };
 		3A9C2A9427CD23210015EAC2 /* CustomViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomViews.swift; sourceTree = "<group>"; };
@@ -82,13 +96,14 @@
 		3A9C2A9E27CD89B80015EAC2 /* CustomTableViewHeader.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = CustomTableViewHeader.xib; sourceTree = "<group>"; };
 		3A9C2AA027CD8A960015EAC2 /* CustomTableViewHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTableViewHeader.swift; sourceTree = "<group>"; };
 		3A9C2AA227CE84070015EAC2 /* FirebaseHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseHelper.swift; sourceTree = "<group>"; };
+		3ABB565127D6DDAA0052C872 /* assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = assets.xcassets; sourceTree = "<group>"; };
 		3AF15AF327C286650042401F /* WEvent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WEvent.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3AF15AF627C286650042401F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		3AF15AF827C286650042401F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		3AF15AFA27C286650042401F /* SignInViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInViewController.swift; sourceTree = "<group>"; };
 		3AF15AFD27C286650042401F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		3AF15B0027C286650042401F /* WEvent.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = WEvent.xcdatamodel; sourceTree = "<group>"; };
-		3AF15B0227C286670042401F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3AF15B0227C286670042401F /* images */ = {isa = PBXFileReference; lastKnownFileType = folder; path = images; sourceTree = "<group>"; };
 		3AF15B0527C286670042401F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		3AF15B0727C286670042401F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		3AF15B0D27C2E5020042401F /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -102,6 +117,7 @@
 				3A9C2A8027CC51E70015EAC2 /* FirebaseAuth in Frameworks */,
 				3A9C2A8C27CC51E70015EAC2 /* FirebaseStorageCombine-Community in Frameworks */,
 				3A9C2A8627CC51E70015EAC2 /* FirebaseFirestoreCombine-Community in Frameworks */,
+				3ABB565527D6F96B0052C872 /* Kingfisher in Frameworks */,
 				3A9C2A8827CC51E70015EAC2 /* FirebaseFirestoreSwift-Beta in Frameworks */,
 				3A9C2A8227CC51E70015EAC2 /* FirebaseAuthCombine-Community in Frameworks */,
 				3A9C2A8E27CC51E70015EAC2 /* FirebaseStorageSwift-Beta in Frameworks */,
@@ -129,7 +145,11 @@
 				3A9C2A9127CD0BD60015EAC2 /* UpdateInformationViewController.swift */,
 				3A9C2A9627CD2BD00015EAC2 /* UpdatePasswordViewController.swift */,
 				3A9C2A9827CD6BB20015EAC2 /* FriendsViewController.swift */,
+				3A6EAAAF27D63E7300D3949C /* AddFriendsViewController.swift */,
 				3A38D92227CED0A1003D7AD2 /* CreateEventViewController.swift */,
+				3A38D92A27D24043003D7AD2 /* MemoriesViewController.swift */,
+				3A38D92C27D4264D003D7AD2 /* ImageScrollViewController.swift */,
+				3A38D93027D4EC7A003D7AD2 /* LocationPreferencesViewController.swift */,
 			);
 			path = ViewControllers;
 			sourceTree = "<group>";
@@ -142,6 +162,8 @@
 				3A9C2A3E27CA9EAE0015EAC2 /* EventAnnotation.swift */,
 				3A9C2A4027CAD0CA0015EAC2 /* CurrentLocation.swift */,
 				3A9C2A5827CAEFE00015EAC2 /* CurrentUser.swift */,
+				3A38D93427D5035C003D7AD2 /* Location.swift */,
+				3A6EAAB127D6404800D3949C /* Friend.swift */,
 			);
 			path = Objects;
 			sourceTree = "<group>";
@@ -151,7 +173,6 @@
 			children = (
 				3A20B2B827C80F0D0053917C /* CustomCollectionViewCell.swift */,
 				3A20B2BB27C82C0C0053917C /* CustomTableViewCell.swift */,
-				3A9C2A5A27CC15990015EAC2 /* CVTableViewCell.swift */,
 			);
 			path = CustomCells;
 			sourceTree = "<group>";
@@ -202,9 +223,11 @@
 				3A20B2BA27C80F270053917C /* CustomCells */,
 				3A9C2A9327CD22D70015EAC2 /* SubClasses */,
 				3A9C2AA427CE97F40015EAC2 /* Helpers */,
+				3A38D93227D4F5F6003D7AD2 /* zips.json */,
 				3AF15AFC27C286650042401F /* Main.storyboard */,
 				3A9C2A9E27CD89B80015EAC2 /* CustomTableViewHeader.xib */,
-				3AF15B0227C286670042401F /* Assets.xcassets */,
+				3ABB565127D6DDAA0052C872 /* assets.xcassets */,
+				3AF15B0227C286670042401F /* images */,
 				3AF15B0427C286670042401F /* LaunchScreen.storyboard */,
 				3AF15B0727C286670042401F /* Info.plist */,
 				3AF15AFF27C286650042401F /* WEvent.xcdatamodeld */,
@@ -238,6 +261,7 @@
 				3A9C2A8927CC51E70015EAC2 /* FirebaseStorage */,
 				3A9C2A8B27CC51E70015EAC2 /* FirebaseStorageCombine-Community */,
 				3A9C2A8D27CC51E70015EAC2 /* FirebaseStorageSwift-Beta */,
+				3ABB565427D6F96B0052C872 /* Kingfisher */,
 			);
 			productName = WEvent;
 			productReference = 3AF15AF327C286650042401F /* WEvent.app */;
@@ -269,6 +293,7 @@
 			mainGroup = 3AF15AEA27C286650042401F;
 			packageReferences = (
 				3A9C2A7E27CC51E70015EAC2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				3ABB565327D6F96A0052C872 /* XCRemoteSwiftPackageReference "Kingfisher" */,
 			);
 			productRefGroup = 3AF15AF427C286650042401F /* Products */;
 			projectDirPath = "";
@@ -285,9 +310,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				3AF15B0627C286670042401F /* LaunchScreen.storyboard in Resources */,
-				3AF15B0327C286670042401F /* Assets.xcassets in Resources */,
+				3A38D93327D4F5F6003D7AD2 /* zips.json in Resources */,
+				3AF15B0327C286670042401F /* images in Resources */,
 				3AF15AFE27C286650042401F /* Main.storyboard in Resources */,
 				3A9C2A9F27CD89B80015EAC2 /* CustomTableViewHeader.xib in Resources */,
+				3ABB565227D6DDAA0052C872 /* assets.xcassets in Resources */,
 				3AF15B0E27C2E5020042401F /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -303,15 +330,18 @@
 				3A38D92327CED0A1003D7AD2 /* CreateEventViewController.swift in Sources */,
 				3A9C2A9027CC8C340015EAC2 /* ProfileTableViewController.swift in Sources */,
 				3AF15B0127C286650042401F /* WEvent.xcdatamodeld in Sources */,
+				3A38D93127D4EC7A003D7AD2 /* LocationPreferencesViewController.swift in Sources */,
 				3A9C2A9727CD2BD00015EAC2 /* UpdatePasswordViewController.swift in Sources */,
 				3A9C2A9227CD0BD60015EAC2 /* UpdateInformationViewController.swift in Sources */,
 				3A20B2AF27C69AB80053917C /* SuccessViewController.swift in Sources */,
 				3A9C2A9527CD23210015EAC2 /* CustomViews.swift in Sources */,
 				3A9C2AA127CD8A960015EAC2 /* CustomTableViewHeader.swift in Sources */,
 				3A20B2B527C6E19C0053917C /* ProfileViewController.swift in Sources */,
+				3A6EAAB027D63E7300D3949C /* AddFriendsViewController.swift in Sources */,
 				3A20B2B127C6AC770053917C /* SearchViewController.swift in Sources */,
-				3A9C2A5B27CC15990015EAC2 /* CVTableViewCell.swift in Sources */,
+				3A38D92D27D4264E003D7AD2 /* ImageScrollViewController.swift in Sources */,
 				3A9C2A5927CAEFE00015EAC2 /* CurrentUser.swift in Sources */,
+				3A6EAAB227D6404800D3949C /* Friend.swift in Sources */,
 				3A9C2A9B27CD80C20015EAC2 /* LinkLabel.swift in Sources */,
 				3AF15AFB27C286650042401F /* SignInViewController.swift in Sources */,
 				3A9C2A9927CD6BB20015EAC2 /* FriendsViewController.swift in Sources */,
@@ -320,8 +350,10 @@
 				3A38D92527CFD150003D7AD2 /* MediaStorageHelper.swift in Sources */,
 				3AF15AF727C286650042401F /* AppDelegate.swift in Sources */,
 				3A20B2B927C80F0D0053917C /* CustomCollectionViewCell.swift in Sources */,
+				3A38D93527D5035C003D7AD2 /* Location.swift in Sources */,
 				3A38D92727CFDF03003D7AD2 /* ImageHelper.swift in Sources */,
 				3A20B2B727C7FA130053917C /* HomeViewController.swift in Sources */,
+				3A38D92B27D24043003D7AD2 /* MemoriesViewController.swift in Sources */,
 				3A9C2A3F27CA9EAE0015EAC2 /* EventAnnotation.swift in Sources */,
 				3AF15AF927C286650042401F /* SceneDelegate.swift in Sources */,
 				3A9C2A4127CAD0CA0015EAC2 /* CurrentLocation.swift in Sources */,
@@ -481,7 +513,9 @@
 				DEVELOPMENT_TEAM = 2Q6N42G82W;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WEvent/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "WEvent needs access to your camera so you can add them to events.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "WEvent needs your location to provide accurate event data in your area.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "WEvent needs access to your photos so you can add them to events.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
@@ -510,7 +544,9 @@
 				DEVELOPMENT_TEAM = 2Q6N42G82W;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WEvent/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "WEvent needs access to your camera so you can add them to events.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "WEvent needs your location to provide accurate event data in your area.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "WEvent needs access to your photos so you can add them to events.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
@@ -561,6 +597,14 @@
 				minimumVersion = 8.10.0;
 			};
 		};
+		3ABB565327D6F96A0052C872 /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/onevcat/Kingfisher.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -603,6 +647,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3A9C2A7E27CC51E70015EAC2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = "FirebaseStorageSwift-Beta";
+		};
+		3ABB565427D6F96B0052C872 /* Kingfisher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3ABB565327D6F96A0052C872 /* XCRemoteSwiftPackageReference "Kingfisher" */;
+			productName = Kingfisher;
 		};
 /* End XCSwiftPackageProductDependency section */
 

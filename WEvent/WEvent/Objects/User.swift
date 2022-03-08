@@ -15,8 +15,7 @@ class User {
     var lastName: String
     var email: String
     var addDate: Date
-//    var isInvited: Bool
-    var friends: [[String: Any]]?
+    var friends: [Friend]?
     var userEvents: [Event]?
     var recentSearches: [String]?
     
@@ -28,13 +27,12 @@ class User {
     }
     
     // Initializer.
-    init(profilePic: UIImage? = nil, firstName: String, lastName: String, email: String, addDate: Date, friends: [[String: Any]]? = nil, userEvents: [Event]? = nil, recentSearches: [String]? = nil) {
+    init(profilePic: UIImage? = nil, firstName: String, lastName: String, email: String, addDate: Date, friends: [Friend]? = nil, userEvents: [Event]? = nil, recentSearches: [String]? = nil) {
         self.profilePic = profilePic
         self.firstName = firstName
         self.lastName = lastName
         self.email = email
         self.addDate = addDate
-//        self.isInvited = isInvited
         self.friends = friends
         self.userEvents = userEvents
         self.recentSearches = recentSearches

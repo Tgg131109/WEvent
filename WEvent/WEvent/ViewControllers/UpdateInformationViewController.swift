@@ -199,13 +199,57 @@ class UpdateInformationViewController: UIViewController, UIImagePickerController
     }
     
     @IBAction func setPicture(_ sender: UIButton) {
-        if UIImagePickerController.isSourceTypeAvailable(.photoLibrary) {
-            imagePicker.delegate = self
-            imagePicker.sourceType = .photoLibrary
-            imagePicker.allowsEditing = false
-
-            present(imagePicker, animated: true, completion: nil)
-        }
+        let getPermissionsDelegate: GetPhotoCameraPermissionsDelegate! = GetImageHelper()
+        let actionSheet = UIAlertController(title: "Photo Source", message: "Choose a Source", preferredStyle: .actionSheet)
+        
+        actionSheet.addAction(UIAlertAction(title: "Photo Library", style: .default, handler: { (action:UIAlertAction) in
+            if UIImagePickerController.isSourceTypeAvailable(.photoLibrary) {
+                Task.init {
+                    if await getPermissionsDelegate.getPhotosPermissions() {
+                        let imagePicker = UIImagePickerController()
+                        
+                        imagePicker.delegate = self
+                        imagePicker.sourceType = .photoLibrary
+                        imagePicker.allowsEditing = false
+                        
+                        self.present(imagePicker, animated: true, completion: nil)
+                    }
+                }
+            } else {
+                // Create alert.
+                let alert = UIAlertController(title: "No Library", message: "Photo library is not available on this device.", preferredStyle: .alert)
+                // Add action to alert controller.
+                alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                // Show alert.
+                self.present(alert, animated: true, completion: nil)
+            }
+        }))
+        
+        actionSheet.addAction(UIAlertAction(title: "Camera", style: .default, handler: { (action:UIAlertAction) in
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Task.init {
+                    if await getPermissionsDelegate.getCameraPermissions() {
+                        let imagePicker = UIImagePickerController()
+                        
+                        imagePicker.delegate = self
+                        imagePicker.sourceType = .camera
+                        
+                        self.present(imagePicker, animated: true)
+                    }
+                }
+            } else {
+                // Create alert.
+                let alert = UIAlertController(title: "No Camera", message: "Camera is not available on this device.", preferredStyle: .alert)
+                // Add action to alert controller.
+                alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                // Show alert.
+                self.present(alert, animated: true, completion: nil)
+            }
+        }))
+        
+        actionSheet.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        
+        self.present(actionSheet, animated: true, completion: nil)
     }
 
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {

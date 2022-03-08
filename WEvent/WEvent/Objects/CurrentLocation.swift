@@ -8,5 +8,6 @@
 import Foundation
 
 struct CurrentLocation {
-    static var location = ""
+    static var location: Location?
+    static var preferredLocation: Location?
 }

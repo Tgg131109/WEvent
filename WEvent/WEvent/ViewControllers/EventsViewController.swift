@@ -12,24 +12,41 @@ class EventsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     @IBOutlet weak var segCon: UISegmentedControl!
     @IBOutlet weak var tableView: UITableView!
     
-    var allUserEvents = [Event]()
     var userUpcomingEvents = [Event]()
     var userPastEvents = [Event]()
     var userSavedEvents = [Event]()
     var eventTypeArray = [[Event]]()
     var selectedEvent: Event?
     
+    var editEvent = false
+    var updateLV = false
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
+        segCon.setTitleTextAttributes([NSAttributedString.Key.foregroundColor: UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1)], for: .selected)
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        let allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
+        
         userUpcomingEvents = allUserEvents.filter({$0.status != ""})
         userPastEvents = allUserEvents.filter({$0.isFavorite == true})
         userSavedEvents = allUserEvents.filter({$0.isFavorite == true})
         
         eventTypeArray = [userUpcomingEvents, userPastEvents, userSavedEvents]
         
-        segCon.setTitleTextAttributes([NSAttributedString.Key.foregroundColor: UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1)], for: .selected)
+        tableView.reloadData()
+//        if updateLV {
+//            self.tableView.reloadData()
+//        }
+        
+        if editEvent {
+            editEvent = false
+            
+            // Show CreateEventViewController.
+            self.performSegue(withIdentifier: "goToEdit", sender: self)
+        }
     }
     
     @IBAction func segConChanged(_ sender: UISegmentedControl) {
@@ -45,12 +62,30 @@ class EventsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "table_cell_5", for: indexPath) as! CustomTableViewCell
         let dataToShow = eventTypeArray[segCon.selectedSegmentIndex]
+        let event = dataToShow[indexPath.row]
         
         cell.eventImageIV.layer.cornerRadius = 10
-        cell.eventImageIV.image = dataToShow[indexPath.row].image
-        cell.eventDateLbl.text = dataToShow[indexPath.row].date
-        cell.eventTitleLbl.text = dataToShow[indexPath.row].title
-        cell.eventAddressLbl.text = dataToShow[indexPath.row].address
+        cell.eventImageIV.image = event.image
+        cell.eventDateLbl.text = event.date
+        
+        if event.isCreated {
+            let title = NSMutableAttributedString(string: "\(event.title) ")
+            let imageAttachment = NSTextAttachment()
+            
+            // Resize image
+            let targetSize = CGSize(width: 14, height: 14)
+            imageAttachment.image = UIImage(named: "logo_stamp")?.scalePreservingAspectRatio(targetSize: targetSize).withTintColor(UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1))
+            
+            let imageStr = NSAttributedString(attachment: imageAttachment)
+            
+            title.append(imageStr)
+            
+            cell.eventTitleLbl.attributedText = title
+        } else {
+            cell.eventTitleLbl.text = event.title
+        }
+        
+        cell.eventAddressLbl.text = event.address
         cell.favButton.isHidden = true
 
         return cell
@@ -76,9 +111,21 @@ class EventsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     // In a storyboard-based application, you will often want to do a little preparation before navigation
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         // Action if navigating to DetailsViewController.
-        if let destination = segue.destination as? DetailsViewController {
-            // Send selected event and userEvents array to DetailsViewController.
+        if let navCon = segue.destination as? UINavigationController {
+            if let destination = navCon.topViewController as? DetailsViewController {
+                // Send selected event and userEvents array to DetailsViewController.
+                destination.event = self.selectedEvent
+                destination.editEvent = {
+                    self.editEvent = true
+                }
+            }
+        }
+        
+        if let destination = segue.destination as? CreateEventViewController {
             destination.event = self.selectedEvent
+            destination.updateCV = {
+                self.updateLV = true
+            }
         }
     }
 }

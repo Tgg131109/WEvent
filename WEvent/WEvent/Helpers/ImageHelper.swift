@@ -7,12 +7,18 @@
 
 import Foundation
 import UIKit
+import PhotosUI
 
 protocol GetImageDelegate {
     func getImageFromUrl(imageUrl: String) -> UIImage
 }
 
-class GetImageHelper: GetImageDelegate {
+protocol GetPhotoCameraPermissionsDelegate {
+    func getPhotosPermissions() async -> Bool
+    func getCameraPermissions() async -> Bool
+}
+
+class GetImageHelper: GetImageDelegate, GetPhotoCameraPermissionsDelegate {
     func getImageFromUrl(imageUrl: String) -> UIImage {
         // Get event image.
         var eventImage = UIImage(named: "logo_stamp")
@@ -37,6 +43,103 @@ class GetImageHelper: GetImageDelegate {
         
         return eventImage!
     }
+    
+    func getPhotosPermissions() async -> Bool {
+        let authorizationStatus = PHPhotoLibrary.authorizationStatus()
+        
+        switch authorizationStatus {
+        case .authorized:
+            return true
+            
+        case .notDetermined:
+            let status = Task.init { () -> Bool in
+                return await PHPhotoLibrary.requestAuthorization(for: .readWrite) == .authorized
+            }
+            
+            return await status.value
+            
+        case .limited:
+            print("limited")
+            return false
+            
+        case .restricted, .denied:
+            // Present alert to notify user that photo library access is needed.
+            print("restricted or denied")
+            return false
+
+        @unknown default:
+            print("something else")
+            // Present alert to notify user that photo library access status is unknown.
+            return false
+        }
+    }
+    
+    func getCameraPermissions() async -> Bool {
+        let authorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+        
+        switch authorizationStatus {
+        case .authorized:
+            return true
+            
+        case .notDetermined:
+            let status = Task.init { () -> Bool in
+                return await AVCaptureDevice.requestAccess(for: .video)
+            }
+            
+            return await status.value
+
+        case .restricted, .denied:
+            print("restricted or denied")
+            // Present alert to notify user that camera access is needed.
+            return false
+            
+        @unknown default:
+            print("something else")
+            // Present alert to notify user that camera access status is unknown.
+            return false
+        }
+    }
+    
+//    func getPicturesFromDevice(_ sender: UIBarButtonItem, vc: UIViewController) {
+//        var configuration = PHPickerConfiguration()
+//        // Limit media selection to only images for the time being.
+//        configuration.filter = .images
+//        // Allow users to select as many images as they want.
+//        configuration.selectionLimit = 0
+//
+//        // Create instance of PHPickerViewController
+//        let picker = PHPickerViewController(configuration: configuration)
+//        // Set the delegate
+//        picker.delegate = self
+//        picker.editButtonItem.tintColor = UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1)
+//        picker.navigationController?.navigationBar.barTintColor = UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1)
+//        // Present the picker
+//        vc.present(picker, animated: true)
+//    }
+//
+//    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+//        picker.dismiss(animated: true, completion: nil)
+//
+//        for result in results {
+//           result.itemProvider.loadObject(ofClass: UIImage.self, completionHandler: { (object, error) in
+//              if let image = object as? UIImage {
+//                 DispatchQueue.main.async {
+//                     // Use UIImage
+//                     print("Selected image: \(image)")
+////                     print(self.imageData?.description)
+//                     self.imageData = image.pngData()
+//                     self.imageCollection.append(image)
+//                     self.mediaCV.reloadData()
+//
+//                     print("Checking image collection")
+//                     if !self.imageCollection.isEmpty {
+//                         self.msgLbl.isHidden = true
+//                     }
+//                 }
+//              }
+//           })
+//        }
+//    }
 }
 
 extension UIImage {

@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import Kingfisher
 
 class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UISearchResultsUpdating, UISearchControllerDelegate, UISearchBarDelegate {
 
@@ -45,7 +46,7 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         getImageDelegate = GetImageHelper()
         
         allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
-        location = CurrentLocation.location
+        location = CurrentLocation.location!.searchStr
         resultCountLbl.text = recentSearches.isEmpty ? "Suggested Searches" : "Recent Searches"
     }
     
@@ -143,7 +144,7 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
                             let addressStr = "\(address[0]), \(address[1])"
                             let eventImage = self.getImageDelegate.getImageFromUrl(imageUrl: imageUrl)
                             
-                            self.searchResults.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage))
+                            self.searchResults.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage, groupId: "", attendeeIds: [String]()))
                         }
                     }
                 }
@@ -175,20 +176,23 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: isSearching ? "table_cell_4" : "table_cell_3", for: indexPath)
-
+        
         if isSearching {
             let cell = cell as! CustomTableViewCell
-
+            let event = searchResults[indexPath.row]
+            
             cell.eventImageIV.layer.cornerRadius = 10
-            cell.eventImageIV.image = searchResults[indexPath.row].image
-            cell.eventDateLbl.text = searchResults[indexPath.row].date
-            cell.eventTitleLbl.text = searchResults[indexPath.row].title
-            cell.eventAddressLbl.text = searchResults[indexPath.row].address
-            cell.favButton.isSelected = allUserEvents.filter({$0.isFavorite == true}).contains(where: {$0.title == searchResults[indexPath.row].title})
+//            cell.eventImageIV.image = searchResults[indexPath.row].image
+            cell.eventImageIV.kf.indicatorType = .activity
+            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))])
+            cell.eventDateLbl.text = event.date
+            cell.eventTitleLbl.text = event.title
+            cell.eventAddressLbl.text = event.address
+            cell.favButton.isSelected = allUserEvents.filter({$0.isFavorite == true}).contains(where: {$0.title == event.title})
             cell.favButton.tintColor = cell.favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
             
             cell.favTapped = {(favButton) in
-                self.favoritesDelegate.setFavorite(event: self.searchResults[indexPath.row], isFav: !favButton.isSelected)
+                self.favoritesDelegate.setFavorite(event: event, isFav: !favButton.isSelected)
                 favButton.isSelected.toggle()
                 favButton.tintColor = favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
             }
@@ -206,6 +210,10 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         self.tableView.deselectRow(at: indexPath, animated: true)
         
         if isSearching {
+            let cell = self.tableView(tableView, cellForRowAt: indexPath) as? CustomTableViewCell
+            
+            searchResults[indexPath.row].image = cell?.eventImageIV.image! ?? UIImage(named: "logo_stamp")!
+            
             // Set selected event to be passed to DetailsViewController
             selectedEvent = searchResults[indexPath.row]
             
@@ -224,9 +232,11 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
     // In a storyboard-based application, you will often want to do a little preparation before navigation
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         // Action if navigating to DetailsViewController.
-        if let destination = segue.destination as? DetailsViewController {
-            // Send selected event and userEvents array to DetailsViewController.
-            destination.event = self.selectedEvent
+        if let navCon = segue.destination as? UINavigationController {
+            if let destination = navCon.topViewController as? DetailsViewController {
+                // Send selected event and userEvents array to DetailsViewController.
+                destination.event = self.selectedEvent
+            }
         }
     }
 }

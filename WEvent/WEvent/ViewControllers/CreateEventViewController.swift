@@ -44,6 +44,7 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
     var event: Event?
     var eventId = ""
     var editEvent = false
+    var imageChanged = false
     
     var updateCV: (() -> Void)?
     
@@ -172,9 +173,9 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
         eventTickets.append(["source" : eventPrice])
         
         // Add event to user's events in Firebase.
-        let data: [String: Any] = ["thumbnail": event?.imageUrl ?? "", "title": eventTitle, "date": eventDate, "tickets": eventTickets, "address": eventLocation, "link": "", "description": eventDescription, "status": "attending", "isCreated": true, "isFavorite": event?.isFavorite ?? false]
+        let data: [String: Any] = ["thumbnail": event?.imageUrl ?? "", "title": eventTitle, "date": eventDate, "tickets": eventTickets, "address": eventLocation, "link": "", "description": eventDescription, "groupId": docId!, "attendeeIds": [docId!], "status": "attending", "isCreated": true, "isFavorite": event?.isFavorite ?? false]
         
-        event = Event(id: event?.id ?? "", title: eventTitle, date: eventDate, address: eventLocation, link: "", description: eventDescription, tickets: eventTickets, imageUrl: event?.imageUrl ?? "", image: self.image, status: "attending", isFavorite: event?.isFavorite ?? false, isCreated: event?.isCreated ?? false)
+        event = Event(id: event?.id ?? "", title: eventTitle, date: eventDate, address: eventLocation, link: "", description: eventDescription, tickets: eventTickets, imageUrl: event?.imageUrl ?? "", image: self.image, groupId: docId!, attendeeIds: [docId!], status: "attending", isFavorite: event?.isFavorite ?? false, isCreated: event?.isCreated ?? false)
         
         if !editEvent {
             saveEventToFirebase(data: data)
@@ -184,13 +185,57 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
     }
 
     @objc func setPicture(_ sender: UIImageView) {
-        if UIImagePickerController.isSourceTypeAvailable(.photoLibrary) {
-            imagePicker.delegate = self
-            imagePicker.sourceType = .photoLibrary
-            imagePicker.allowsEditing = false
-
-            present(imagePicker, animated: true, completion: nil)
-        }
+        let getPermissionsDelegate: GetPhotoCameraPermissionsDelegate! = GetImageHelper()
+        let actionSheet = UIAlertController(title: "Photo Source", message: "Choose a Source", preferredStyle: .actionSheet)
+        
+        actionSheet.addAction(UIAlertAction(title: "Photo Library", style: .default, handler: { (action:UIAlertAction) in
+            if UIImagePickerController.isSourceTypeAvailable(.photoLibrary) {
+                Task.init {
+                    if await getPermissionsDelegate.getPhotosPermissions() {
+                        let imagePicker = UIImagePickerController()
+                        
+                        imagePicker.delegate = self
+                        imagePicker.sourceType = .photoLibrary
+                        imagePicker.allowsEditing = false
+                        
+                        self.present(imagePicker, animated: true, completion: nil)
+                    }
+                }
+            } else {
+                // Create alert.
+                let alert = UIAlertController(title: "No Library", message: "Photo library is not available on this device.", preferredStyle: .alert)
+                // Add action to alert controller.
+                alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                // Show alert.
+                self.present(alert, animated: true, completion: nil)
+            }
+        }))
+        
+        actionSheet.addAction(UIAlertAction(title: "Camera", style: .default, handler: { (action:UIAlertAction) in
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Task.init {
+                    if await getPermissionsDelegate.getCameraPermissions() {
+                        let imagePicker = UIImagePickerController()
+                        
+                        imagePicker.delegate = self
+                        imagePicker.sourceType = .camera
+                        
+                        self.present(imagePicker, animated: true)
+                    }
+                }
+            } else {
+                // Create alert.
+                let alert = UIAlertController(title: "No Camera", message: "Camera is not available on this device.", preferredStyle: .alert)
+                // Add action to alert controller.
+                alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                // Show alert.
+                self.present(alert, animated: true, completion: nil)
+            }
+        }))
+        
+        actionSheet.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        
+        self.present(actionSheet, animated: true, completion: nil)
     }
 
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
@@ -203,6 +248,7 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
             
             imageData = scaledImg.pngData()
             eventPicIV.image = img
+            imageChanged = true
             self.image = img
         }
     }
@@ -302,6 +348,7 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
             } else {
                 // Update current user's events.
                 if let index = self.allUserEvents.firstIndex(where: { $0.id == self.eventId }) {
+                    self.event?.image = self.eventPicIV.image!
                     self.allUserEvents[index] = self.event!
                     CurrentUser.currentUser?.userEvents = self.allUserEvents
                     
@@ -310,7 +357,10 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
                     self.updateCV?()
                     
                     self.showSuccessAlert()
-                    self.saveImageToFirebase()
+    
+                    if self.imageChanged {
+                        self.saveImageToFirebase()
+                    }
                 }
             }
         }
@@ -318,7 +368,7 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
     
     private func saveImageToFirebase() {
         // Save event image to Firebase Storage.
-        let storageRef = Storage.storage().reference().child("users").child(docId!).child("events").child(eventId).child("thumbnail.png")
+        let storageRef = Storage.storage().reference().child("events").child(eventId).child("thumbnail.png")
         let metaData = StorageMetadata()
         
         metaData.contentType = "image/png"
