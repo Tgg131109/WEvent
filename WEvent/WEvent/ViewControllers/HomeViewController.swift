@@ -137,6 +137,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
         geocoder.reverseGeocodeLocation(locations[0]) { (placemarks, error) in
             if (error != nil) {
                 print("error in reverseGeocode")
+                return
             }
             
             let placemark = placemarks! as [CLPlacemark]
@@ -195,13 +196,8 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                 
                 // User recieved event invite.
                 if (diff.type == .added) {
-                    print("Invited to event: \(title)")
-
-                    
-//                    self.navigationController?.tabBarController?.tabBar.items?[2].badgeValue = "\(self.inviteCount)"
-                    
                     if CurrentUser.currentUser?.userEvents?.first(where: { $0.id == id }) == nil && status == "invited" {
-                        print("Update local data.")
+                        print("Invited to event: \(title)")
                         self.inviteCount += 1
                         
                         CurrentUser.currentUser?.userEvents?.append(subjectEvent)
@@ -287,11 +283,9 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                 
                 // User recieved friend request.
                 if (diff.type == .added) {
-                    print("New friend: \(subjectFriend.fullName)")
-                    
                     if CurrentUser.currentUser?.friends?.first(where: { $0.id == diff.document.documentID}) == nil && status == "requested" {
-                        print("Update local data.")
-
+                        print("New friend: \(subjectFriend.fullName)")
+                        
                         CurrentUser.currentUser?.friends?.append(subjectFriend)
                         
                         self.requestCount += 1
