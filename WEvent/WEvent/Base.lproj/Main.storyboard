@@ -844,7 +844,7 @@
                                 <rect key="frame" x="0.0" y="295" width="414" height="601"/>
                                 <subviews>
                                     <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="QrE-lt-Avu">
-                                        <rect key="frame" x="0.0" y="0.0" width="414" height="512"/>
+                                        <rect key="frame" x="0.0" y="0.0" width="414" height="502"/>
                                         <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                     </view>
                                     <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="calendar" catalog="system" translatesAutoresizingMaskIntoConstraints="NO" id="6dZ-bM-B8r">
@@ -1036,7 +1036,7 @@
                                     <constraint firstItem="QrE-lt-Avu" firstAttribute="width" secondItem="Yy3-Dw-bMB" secondAttribute="width" id="wUf-2p-ylA"/>
                                     <constraint firstItem="ONp-Iw-Nwx" firstAttribute="leading" secondItem="m1U-FN-J3J" secondAttribute="trailing" constant="-30" id="xGN-cI-I9J"/>
                                     <constraint firstItem="QrE-lt-Avu" firstAttribute="leading" secondItem="Yy3-Dw-bMB" secondAttribute="leading" id="xKI-bw-cjj"/>
-                                    <constraint firstAttribute="bottom" secondItem="Bi3-SB-aqM" secondAttribute="bottom" constant="90" id="xRN-oL-IBu"/>
+                                    <constraint firstAttribute="bottom" secondItem="Bi3-SB-aqM" secondAttribute="bottom" constant="80" id="xRN-oL-IBu"/>
                                     <constraint firstItem="cxh-nw-3TY" firstAttribute="leading" secondItem="Yy3-Dw-bMB" secondAttribute="leading" constant="20" id="ycB-MQ-dqx"/>
                                 </constraints>
                                 <viewLayoutGuide key="contentLayoutGuide" id="DS1-eY-a5J"/>
@@ -1266,7 +1266,7 @@
         <scene sceneID="Uf8-rI-zra">
             <objects>
                 <tableViewController id="VHE-zi-KbG" customClass="HomeViewController" customModule="WEvent" customModuleProvider="target" sceneMemberID="viewController">
-                    <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="-1" estimatedSectionHeaderHeight="-1" sectionFooterHeight="-1" estimatedSectionFooterHeight="-1" id="dTd-Z5-gHf">
+                    <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="-1" estimatedSectionHeaderHeight="-1" sectionFooterHeight="-1" estimatedSectionFooterHeight="-1" id="dTd-Z5-gHf">
                         <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
@@ -1507,7 +1507,7 @@
                                     <fontDescription key="titleFontDescription" type="system" weight="semibold" pointSize="17"/>
                                 </buttonConfiguration>
                                 <connections>
-                                    <segue destination="4QP-Ti-qlM" kind="presentation" modalPresentationStyle="fullScreen" id="2CK-If-Kbh"/>
+                                    <action selector="goToHome:" destination="Xsd-TH-eOZ" eventType="touchUpInside" id="S8r-Px-aDH"/>
                                 </connections>
                             </button>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="qKf-63-pQ2" customClass="CustomShadowView" customModule="WEvent" customModuleProvider="target">
@@ -1565,6 +1565,7 @@
                     </navigationItem>
                     <connections>
                         <outlet property="picIV" destination="fw9-jq-6GC" id="OMx-a3-qFY"/>
+                        <segue destination="4QP-Ti-qlM" kind="presentation" identifier="goToHome" modalPresentationStyle="fullScreen" id="U3S-24-0nn"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dbJ-NV-KhA" sceneMemberID="firstResponder"/>
@@ -1826,6 +1827,7 @@
                                     <segment title="Upcoming"/>
                                     <segment title="Past"/>
                                     <segment title="Saved"/>
+                                    <segment title="Invites"/>
                                 </segments>
                                 <connections>
                                     <action selector="segConChanged:" destination="9Ga-Yo-tUz" eventType="valueChanged" id="B3C-cK-Nrz"/>
@@ -1915,21 +1917,31 @@
                                     <outlet property="delegate" destination="9Ga-Yo-tUz" id="0d0-wA-Zk1"/>
                                 </connections>
                             </tableView>
+                            <label hidden="YES" opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="No events found" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="BNy-Oq-gMF">
+                                <rect key="frame" x="20" y="436" width="374" height="24"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="20"/>
+                                <color key="textColor" systemColor="systemGrayColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="6D3-Um-wyD"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                         <constraints>
                             <constraint firstItem="X0v-xL-wp6" firstAttribute="leading" secondItem="6D3-Um-wyD" secondAttribute="leading" id="DfL-rM-Dd4"/>
+                            <constraint firstAttribute="trailing" secondItem="BNy-Oq-gMF" secondAttribute="trailing" constant="20" id="HNJ-Oy-wsv"/>
                             <constraint firstItem="6D3-Um-wyD" firstAttribute="trailing" secondItem="GdC-KL-wIS" secondAttribute="trailing" constant="20" id="Ke5-Pj-q7L"/>
                             <constraint firstItem="6D3-Um-wyD" firstAttribute="bottom" secondItem="X0v-xL-wp6" secondAttribute="bottom" id="Lcw-sy-UxR"/>
+                            <constraint firstItem="BNy-Oq-gMF" firstAttribute="leading" secondItem="rfl-D4-ic8" secondAttribute="leading" constant="20" id="WM3-hd-Cfe"/>
                             <constraint firstItem="X0v-xL-wp6" firstAttribute="top" secondItem="GdC-KL-wIS" secondAttribute="bottom" constant="8" symbolic="YES" id="WYU-9c-FRg"/>
                             <constraint firstItem="GdC-KL-wIS" firstAttribute="leading" secondItem="6D3-Um-wyD" secondAttribute="leading" constant="20" id="hVi-PO-126"/>
                             <constraint firstItem="6D3-Um-wyD" firstAttribute="trailing" secondItem="X0v-xL-wp6" secondAttribute="trailing" id="heP-vm-Q6f"/>
+                            <constraint firstItem="BNy-Oq-gMF" firstAttribute="centerY" secondItem="rfl-D4-ic8" secondAttribute="centerY" id="kmt-7y-kBE"/>
                             <constraint firstItem="GdC-KL-wIS" firstAttribute="top" secondItem="6D3-Um-wyD" secondAttribute="top" constant="20" id="sN3-zw-4EH"/>
                         </constraints>
                     </view>
                     <navigationItem key="navigationItem" title="Events" id="rkP-iX-UTB"/>
                     <connections>
+                        <outlet property="msgLbl" destination="BNy-Oq-gMF" id="LtB-aR-gns"/>
                         <outlet property="segCon" destination="GdC-KL-wIS" id="DZj-9W-Mgc"/>
                         <outlet property="tableView" destination="X0v-xL-wp6" id="WOS-8a-vMR"/>
                         <segue destination="0Gu-Fg-UGj" kind="presentation" identifier="goToDetails" modalPresentationStyle="fullScreen" id="dSH-NG-SHE"/>
@@ -2927,6 +2939,7 @@
                                             <subviews>
                                                 <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="Fjh-VW-6EN">
                                                     <rect key="frame" x="0.0" y="0.0" width="128" height="128"/>
+                                                    <color key="tintColor" systemColor="systemGrayColor"/>
                                                 </imageView>
                                             </subviews>
                                             <constraints>
@@ -3456,9 +3469,9 @@
         </scene>
     </scenes>
     <inferredMetricsTieBreakers>
-        <segue reference="7N4-03-SKV"/>
-        <segue reference="6cl-aQ-o4R"/>
-        <segue reference="uZP-lq-gmH"/>
+        <segue reference="dSH-NG-SHE"/>
+        <segue reference="iPv-Qg-BBG"/>
+        <segue reference="U3S-24-0nn"/>
     </inferredMetricsTieBreakers>
     <color key="tintColor" red="0.93333333330000001" green="0.41568627450000001" blue="0.2666666667" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
     <resources>

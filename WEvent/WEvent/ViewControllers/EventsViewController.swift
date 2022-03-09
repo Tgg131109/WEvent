@@ -11,10 +11,12 @@ class EventsViewController: UIViewController, UITableViewDelegate, UITableViewDa
 
     @IBOutlet weak var segCon: UISegmentedControl!
     @IBOutlet weak var tableView: UITableView!
+    @IBOutlet weak var msgLbl: UILabel!
     
     var userUpcomingEvents = [Event]()
     var userPastEvents = [Event]()
     var userSavedEvents = [Event]()
+    var userInvitedEvents = [Event]()
     var eventTypeArray = [[Event]]()
     var selectedEvent: Event?
     
@@ -33,8 +35,9 @@ class EventsViewController: UIViewController, UITableViewDelegate, UITableViewDa
         userUpcomingEvents = allUserEvents.filter({$0.status != ""})
         userPastEvents = allUserEvents.filter({$0.isFavorite == true})
         userSavedEvents = allUserEvents.filter({$0.isFavorite == true})
+        userInvitedEvents = allUserEvents.filter({$0.status == "invited"})
         
-        eventTypeArray = [userUpcomingEvents, userPastEvents, userSavedEvents]
+        eventTypeArray = [userUpcomingEvents, userPastEvents, userSavedEvents, userInvitedEvents]
         
         tableView.reloadData()
 //        if updateLV {
@@ -51,6 +54,8 @@ class EventsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     
     @IBAction func segConChanged(_ sender: UISegmentedControl) {
         tableView.reloadData()
+        
+        msgLbl.isHidden = !eventTypeArray[segCon.selectedSegmentIndex].isEmpty
     }
     
     // MARK: - UITableViewDataSource
@@ -65,7 +70,41 @@ class EventsViewController: UIViewController, UITableViewDelegate, UITableViewDa
         let event = dataToShow[indexPath.row]
         
         cell.eventImageIV.layer.cornerRadius = 10
-        cell.eventImageIV.image = event.image
+        
+        if segCon.selectedSegmentIndex != 0 {
+            cell.eventImageIV.kf.indicatorType = .activity
+            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+                switch result {
+                case .success(let value):
+                    dataToShow[indexPath.row].image = value.image
+                    event.image = value.image
+                    
+                    switch self.segCon.selectedSegmentIndex {
+                    case 1:
+                        self.userPastEvents[indexPath.row].image = value.image
+                        break
+                    case 2:
+                        self.userSavedEvents[indexPath.row].image = value.image
+                        break
+                    case 3:
+                        self.userInvitedEvents[indexPath.row].image = value.image
+                        break
+                    default:
+                        break
+                    }
+                    
+                    CurrentUser.currentUser?.userEvents?.first(where: { $0.id == event.id})?.image = value.image
+                    break
+                    
+                case .failure(let error):
+                    print("Error getting image: \(error)")
+                    break
+                }
+            })
+        } else {
+            cell.eventImageIV.image = event.image
+        }
+
         cell.eventDateLbl.text = event.date
         
         if event.isCreated {

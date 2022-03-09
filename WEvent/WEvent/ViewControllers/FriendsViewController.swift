@@ -22,6 +22,24 @@ class FriendsViewController: UIViewController, UITableViewDelegate, UITableViewD
     override func viewDidLoad() {
         super.viewDidLoad()
         
+//        let allFriends = CurrentUser.currentUser?.friends ?? [Friend]()
+//
+//        friends = allFriends.filter({ $0.status != "requested" })
+//        requests = allFriends.filter({ $0.status == "requested" })
+//
+//        friendTypeArray = [friends, requests]
+        
+        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(msgLblTapped(_:)))
+        
+//        noFriendsLbl.isHidden = !allFriends.isEmpty
+        noFriendsLbl.addGestureRecognizer(tapRecognizer)
+        noFriendsLbl.layer.cornerRadius = 6
+        noFriendsLbl.layer.masksToBounds = true
+        
+        segCon.setTitleTextAttributes([NSAttributedString.Key.foregroundColor: UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1)], for: .selected)
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
         let allFriends = CurrentUser.currentUser?.friends ?? [Friend]()
         
         friends = allFriends.filter({ $0.status != "requested" })
@@ -29,14 +47,9 @@ class FriendsViewController: UIViewController, UITableViewDelegate, UITableViewD
         
         friendTypeArray = [friends, requests]
         
-        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(msgLblTapped(_:)))
+        noFriendsLbl.isHidden = !friends.isEmpty
         
-        noFriendsLbl.isHidden = !allFriends.isEmpty
-        noFriendsLbl.addGestureRecognizer(tapRecognizer)
-        noFriendsLbl.layer.cornerRadius = 6
-        noFriendsLbl.layer.masksToBounds = true
-        
-        segCon.setTitleTextAttributes([NSAttributedString.Key.foregroundColor: UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1)], for: .selected)
+        tableView.reloadData()
     }
     
     @objc func msgLblTapped(_ sender: Any) {
@@ -49,8 +62,10 @@ class FriendsViewController: UIViewController, UITableViewDelegate, UITableViewD
     
     @IBAction func segConChanged(_ sender: UISegmentedControl) {
         if segCon.selectedSegmentIndex == 0 {
+            noRequestsLbl.isHidden = true
             noFriendsLbl.isHidden = !friends.isEmpty
         } else {
+            noFriendsLbl.isHidden = true
             noRequestsLbl.isHidden = !requests.isEmpty
         }
         
@@ -124,13 +139,35 @@ class FriendsViewController: UIViewController, UITableViewDelegate, UITableViewD
         let dataToShow = friendTypeArray[segCon.selectedSegmentIndex]
         let friend = dataToShow[indexPath.row]
         
-        cell.userImageIV.image = friend.profilePic
+        cell.userImageIV.kf.indicatorType = .activity
+        cell.userImageIV.kf.setImage(with: URL(string: friend.picUrl ?? ""), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+            switch result {
+            case .success(let value):
+                dataToShow[indexPath.row].profilePic = value.image
+                friend.profilePic = value.image
+                
+                if self.segCon.selectedSegmentIndex == 0 {
+                    self.friends[indexPath.row].profilePic = value.image
+                } else {
+                    self.requests[indexPath.row].profilePic = value.image
+                }
+
+                CurrentUser.currentUser?.friends?.first(where: { $0.id == friend.id})?.profilePic = value.image
+                break
+                
+            case .failure(let error):
+                print("Error getting image: \(error)")
+                break
+            }
+        })
+        
         cell.userNameLbl.text = friend.fullName
         cell.userEmailLbl.text = friend.email
         
         if segCon.selectedSegmentIndex == 1 {
             cell.declineButton.isHidden = false
             cell.acceptButton.isHidden = false
+            cell.pendingLbl.isHidden = true
             
             cell.responseTapped = {(response) in
                 print(response)

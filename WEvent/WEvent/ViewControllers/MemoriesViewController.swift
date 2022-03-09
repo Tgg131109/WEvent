@@ -8,6 +8,7 @@
 import UIKit
 import PhotosUI
 import Firebase
+import Kingfisher
 
 class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, UIImagePickerControllerDelegate & UINavigationControllerDelegate {
     
@@ -20,6 +21,7 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
     var docRef: DocumentReference?
  
     var images = [UIImage]()
+    var imageUrls = [String]()
     
     var eventId: String?
     var eventTitle: String?
@@ -42,6 +44,7 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
         msgLbl.layer.masksToBounds = true
         
         getImagesFromStorage()
+        
     }
     
     @objc func msgLblTapped(_ sender: Any) {
@@ -123,8 +126,6 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
     private func getImagesFromStorage() {
         activityView.activityIndicator.startAnimating()
         activityView.isHidden = false
-        
-        let getImageDelegate: GetImageDelegate! = GetImageHelper()
 
         for id in eventAttendeeIds! {
             docRef!.collection("images").document(id).getDocument { (document, error) in
@@ -137,16 +138,14 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
                         return
                     }
                     
-                    // Get images from Firebase Storage.
                     for urlStr in userImages {
-                        let img = getImageDelegate.getImageFromUrl(imageUrl: urlStr)
-
-                        self.images.append(img)
+                        self.imageUrls.append(urlStr)
+                        self.images.append(UIImage(named: "logo_stamp")!)
                         
                         if !self.images.isEmpty {
                             self.msgLbl.isHidden = true
                         }
-                        
+
                         DispatchQueue.main.async {
                             self.mediaCV.reloadData()
                         }
@@ -226,7 +225,18 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "coll_cell_2", for: indexPath) as! ImageCollectionViewCell
         
-        cell.imageIV.image = images[indexPath.row]
+        cell.imageIV.kf.indicatorType = .activity
+        cell.imageIV.kf.setImage(with: URL(string: imageUrls[indexPath.row]), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+            switch result {
+            case .success(let value):
+                self.images[indexPath.row] = value.image
+                break
+                
+            case .failure(let error):
+                print("Error getting image: \(error)")
+                break
+            }
+        })
         
         if collectionView.numberOfItems(inSection: 0) > 0 && !activityView.isHidden {
             activityView.isHidden = true

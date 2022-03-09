@@ -142,7 +142,7 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
                             
                             let dateStr = "\(start) | \(when)"
                             let addressStr = "\(address[0]), \(address[1])"
-                            let eventImage = self.getImageDelegate.getImageFromUrl(imageUrl: imageUrl)
+                            let eventImage = UIImage(named: "logo_stamp")!
                             
                             self.searchResults.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage, groupId: "", attendeeIds: [String]()))
                         }
@@ -182,9 +182,19 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
             let event = searchResults[indexPath.row]
             
             cell.eventImageIV.layer.cornerRadius = 10
-//            cell.eventImageIV.image = searchResults[indexPath.row].image
             cell.eventImageIV.kf.indicatorType = .activity
-            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))])
+            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+                switch result {
+                case .success(let value):
+                    event.image = value.image
+                    self.searchResults[indexPath.row].image = value.image
+                    break
+                    
+                case .failure(let error):
+                    print("Error getting image: \(error)")
+                    break
+                }
+            })
             cell.eventDateLbl.text = event.date
             cell.eventTitleLbl.text = event.title
             cell.eventAddressLbl.text = event.address
@@ -210,10 +220,6 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         self.tableView.deselectRow(at: indexPath, animated: true)
         
         if isSearching {
-            let cell = self.tableView(tableView, cellForRowAt: indexPath) as? CustomTableViewCell
-            
-            searchResults[indexPath.row].image = cell?.eventImageIV.image! ?? UIImage(named: "logo_stamp")!
-            
             // Set selected event to be passed to DetailsViewController
             selectedEvent = searchResults[indexPath.row]
             

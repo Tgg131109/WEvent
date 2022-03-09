@@ -11,6 +11,7 @@ import UIKit
 class Friend {
     // Stored properties.
     var id: String
+    var picUrl: String?
     var profilePic: UIImage?
     var firstName: String
     var lastName: String
@@ -25,8 +26,9 @@ class Friend {
     }
     
     // Initializer.
-    init(id: String, profilePic: UIImage? = nil, firstName: String, lastName: String, email: String, status: String) {
+    init(id: String, picUrl: String? = "", profilePic: UIImage? = nil, firstName: String, lastName: String, email: String, status: String) {
         self.id = id
+        self.picUrl = picUrl
         self.profilePic = profilePic
         self.firstName = firstName
         self.lastName = lastName

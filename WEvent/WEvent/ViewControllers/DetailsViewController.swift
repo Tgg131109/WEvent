@@ -9,6 +9,7 @@ import UIKit
 import MapKit
 import Firebase
 import LinkPresentation
+import Kingfisher
 
 class DetailsViewController: UIViewController, UIActivityItemSource {
 
@@ -324,13 +325,26 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
             }
             
             for i in 0...eventAttendeeIds.count - 1 {
-                attendeeIVs[i].layer.borderColor = UIColor.systemBackground.cgColor
                 attendeeIVs[i].isHidden = false
                 
                 if eventAttendeeIds[i] == userId {
                     attendeeIVs[i].image = CurrentUser.currentUser?.profilePic
                 } else {
-                    attendeeIVs[i].image = CurrentUser.currentUser?.friends?.first(where: { $0.id == eventAttendeeIds[i] })?.profilePic
+                    let imageUrl = CurrentUser.currentUser?.friends?.first(where: { $0.id == eventAttendeeIds[i] })?.picUrl ?? ""
+                    
+                    attendeeIVs[i].kf.indicatorType = .activity
+                    attendeeIVs[i].kf.setImage(with: URL(string: imageUrl), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+                        switch result {
+                        case .success(let value):
+                            CurrentUser.currentUser?.friends?.first(where: { $0.id == self.eventAttendeeIds[i] })?.profilePic = value.image
+                            break
+                            
+                        case .failure(let error):
+                            print("friend: \(self.eventAttendeeIds[i])")
+                            print("Error getting attendee image: \(error)")
+                            break
+                        }
+                    })
                 }
             }
         }

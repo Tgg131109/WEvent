@@ -7,6 +7,7 @@
 
 import UIKit
 import Firebase
+import Kingfisher
 
 class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UISearchResultsUpdating, UISearchControllerDelegate, UISearchBarDelegate {
 
@@ -57,7 +58,7 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
         
         saveFriendsToFirebase()
         
-        self.dismiss(animated: true, completion: nil)
+        navigationController?.popViewController(animated: true)
     }
     
     func updateSearchResults(for searchController: UISearchController) {}
@@ -69,6 +70,7 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
             return
         }
         
+        resultCountLbl.text = "Searching..."
         // Run query
         findUsers(searchStr: searchStr)
     }
@@ -79,7 +81,7 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
         let collRef = db.collection("users")
         
         var foundIds = [String]()
-        
+        var methodCount = 0
         // Search by first name.
         collRef.whereField("firstName", isGreaterThanOrEqualTo: searchStr).whereField("firstName", isLessThanOrEqualTo: "\(searchStr)~").getDocuments() { (querySnapshot, err) in
             if let err = err {
@@ -87,13 +89,17 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
             } else {
                 for document in querySnapshot!.documents {
                     // Check if user has already been found.
-                    if !foundIds.contains(document.documentID) {
+                    let id = document.documentID
+                    if !foundIds.contains(id) && !self.friendIds.contains(id) && id != Auth.auth().currentUser?.uid {
                         foundIds.append(document.documentID)
                         
                         self.getUserData(document: document)
                     }
                 }
             }
+            
+            methodCount += 1
+            self.doneSearch(count: methodCount)
         }
         
         // Search by last name.
@@ -103,13 +109,17 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
             } else {
                 for document in querySnapshot!.documents {
                     // Check if user has already been found.
-                    if !foundIds.contains(document.documentID) {
+                    let id = document.documentID
+                    if !foundIds.contains(id) && !self.friendIds.contains(id) && id != Auth.auth().currentUser?.uid {
                         foundIds.append(document.documentID)
                         
                         self.getUserData(document: document)
                     }
                 }
             }
+            
+            methodCount += 1
+            self.doneSearch(count: methodCount)
         }
         
         // Search by email.
@@ -119,13 +129,17 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
             } else {
                 for document in querySnapshot!.documents {
                     // Check if user has already been found.
-                    if !foundIds.contains(document.documentID) {
+                    let id = document.documentID
+                    if !foundIds.contains(id) && !self.friendIds.contains(id) && id != Auth.auth().currentUser?.uid {
                         foundIds.append(document.documentID)
                         
                         self.getUserData(document: document)
                     }
                 }
             }
+            
+            methodCount += 1
+            self.doneSearch(count: methodCount)
         }
     }
     
@@ -144,7 +158,6 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
         // Create Friend object and add to results array.
         searchResults.append(Friend(id: document.documentID, profilePic: UIImage(named: "logo_stamp")!, firstName: fName, lastName: lName, email: email, status: ""))
         getUserImage(docId: document.documentID)
-        tableView.reloadData()
     }
     
     private func getUserImage(docId: String) {
@@ -158,12 +171,9 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
             } else {
                 if let url = url {
                     // Get the download URL.
-                    do {
-                        self.searchResults.first(where: { $0.id == docId})?.profilePic = UIImage(data: try Data.init(contentsOf: url))
-                        self.tableView.reloadData()
-                    } catch {
-                        print("Error: \(error.localizedDescription)")
-                    }
+                    self.searchResults.first(where: { $0.id == docId })?.picUrl = url.absoluteString
+                    self.tableView.reloadData()
+                    self.resultCountLbl.text = "\(self.searchResults.count) users found"
                 }
             }
         }
@@ -199,6 +209,15 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
         }
     }
     
+    private func doneSearch(count: Int) {
+        if count == 3 {
+            if searchResults.isEmpty {
+                resultCountLbl.text = "No users found"
+                tableView.reloadData()
+            }
+        }
+    }
+    
     // MARK: - UITableViewDataSource
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -209,7 +228,20 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
         let cell = tableView.dequeueReusableCell(withIdentifier: "table_cell_9", for: indexPath)  as! FriendTableViewCell
         let user = searchResults[indexPath.row]
         
-        cell.userImageIV.image = user.profilePic
+        cell.userImageIV.kf.indicatorType = .activity
+        cell.userImageIV.kf.setImage(with: URL(string: user.picUrl ?? ""), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+            switch result {
+            case .success(let value):
+                user.profilePic = value.image
+                self.searchResults[indexPath.row].profilePic = value.image
+                break
+                
+            case .failure(let error):
+                print("Error getting image: \(error)")
+                break
+            }
+        })
+        
         cell.userNameLbl.text = user.fullName
         cell.userEmailLbl.text = user.email
         

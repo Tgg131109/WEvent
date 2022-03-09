@@ -112,12 +112,9 @@ class FirebaseHelper: UserDataDelegate, FavoritesDelegate {
                     print("There was an error setting event data")
                     return
                 }
-                
-                let getImageDelegate: GetImageDelegate! = GetImageHelper()
-                let eventImage = getImageDelegate.getImageFromUrl(imageUrl: imageUrl)
                                                 
                 // Create Event object and add to events array.
-                events.append(Event(id: id, title: title, date: date, address: address, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage, groupId: groupId, attendeeIds: attendeeIds, status: status, isFavorite: favorite, isCreated: created))
+                events.append(Event(id: id, title: title, date: date, address: address, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: UIImage(named: "logo_stamp")!, groupId: groupId, attendeeIds: attendeeIds, status: status, isFavorite: favorite, isCreated: created))
             }
             
             let img = UIImage(named: "logo_stamp")!
@@ -142,7 +139,6 @@ class FirebaseHelper: UserDataDelegate, FavoritesDelegate {
             try await querySnapshot = docRef!.collection("friends").getDocuments()
             
             for document in querySnapshot.documents {
-                print("\(document.documentID) => \(document.data())")
                 let userData = document.data()
                 
                 guard let fName = userData["firstName"] as? String,
@@ -168,7 +164,7 @@ class FirebaseHelper: UserDataDelegate, FavoritesDelegate {
                 CurrentUser.currentUser?.friends = friends
             }
             
-            // Retrieve each friend's profile picture.
+            // Retrieve each friend's profile picture url.
             for friend in friends {
                 getFriendProfilePic(docId: friend.id)
             }
@@ -209,12 +205,13 @@ class FirebaseHelper: UserDataDelegate, FavoritesDelegate {
                 print("There was an error: \(error)")
             } else {
                 if let url = url {
+                    CurrentUser.currentUser?.friends?.first(where: { $0.id == docId})?.picUrl = url.absoluteString
                     // Get the download URL.
-                    do {
-                        CurrentUser.currentUser?.friends?.first(where: { $0.id == docId})?.profilePic = UIImage(data: try Data.init(contentsOf: url))
-                    } catch {
-                        print("Error: \(error.localizedDescription)")
-                    }
+//                    do {
+//                        CurrentUser.currentUser?.friends?.first(where: { $0.id == docId})?.profilePic = UIImage(data: try Data.init(contentsOf: url))
+//                    } catch {
+//                        print("Error: \(error.localizedDescription)")
+//                    }
                 }
             }
         }

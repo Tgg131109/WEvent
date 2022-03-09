@@ -93,6 +93,7 @@ class SignUpViewController: UIViewController, UIImagePickerControllerDelegate, U
         activityView.isHidden = false
         
         let addDate = Date()
+        self.navigationItem.setHidesBackButton(true, animated: true)
         
         // Create new user account in Firebase.
         Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
@@ -106,7 +107,7 @@ class SignUpViewController: UIViewController, UIImagePickerControllerDelegate, U
                 
                 // Show alert.
                 self.present(alert, animated: true, completion: nil)
-                
+                self.navigationItem.setHidesBackButton(false, animated: true)
                 return
             }
                         
@@ -225,9 +226,13 @@ class SignUpViewController: UIViewController, UIImagePickerControllerDelegate, U
         picker.dismiss(animated: true, completion: nil)
         
         if let image = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
-            imageData = image.pngData()
+            // Resize image
+            let targetSize = CGSize(width: 100, height: 100)
+            let scaledImg = image.scalePreservingAspectRatio(targetSize: targetSize)
             
-            picIV.image = image
+            imageData = scaledImg.pngData()
+            
+            picIV.image = scaledImg
         }
     }
 }

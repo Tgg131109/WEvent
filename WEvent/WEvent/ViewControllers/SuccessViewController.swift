@@ -20,4 +20,9 @@ class SuccessViewController: UIViewController {
             picIV.image = CurrentUser.currentUser?.profilePic
         }
     }
+
+    @IBAction func goToHome(_ sender: UIButton) {
+        performSegue(withIdentifier: "goToHome", sender: self)
+        navigationController?.popToRootViewController(animated: true)
+    }
 }
