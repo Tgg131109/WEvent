@@ -9,6 +9,8 @@ import Foundation
 import UIKit
 
 class CustomTextField: UITextField {
+    private var __maxLengths = [UITextField: Int]()
+    
     required init?(coder aDecoder: NSCoder) {
         super.init(coder:aDecoder)
         self.layer.cornerRadius = 6
@@ -16,6 +18,38 @@ class CustomTextField: UITextField {
         self.layer.borderColor = UIColor(red: 194/255, green: 231/255, blue: 250/255, alpha: 1).cgColor
         self.layer.masksToBounds = true
     }
+    
+//    @IBInspectable var maxLength: Int {
+//        get {
+//            guard let l = __maxLengths[self]
+//            else {
+//                return 150 // (global default-limit. or just, Int.max)
+//            }
+//            
+//            return l
+//        }
+//        
+//        set {
+//            __maxLengths[self] = newValue
+//            addTarget(self, action: #selector(fix), for: .editingChanged)
+//        }
+//    }
+//    
+//    @objc func fix(textField: UITextField) {
+//        if let str = textField.text?.prefix(maxLength) {
+//            let range = NSRange(location: 0, length: textField.text!.count)
+//
+//            print("\(str.count) | \(range.length)")
+//            guard range.length <= str.count
+//            else {
+//                textField.text = String(textField.text!.dropLast(1))
+//                print(textField.text?.count)
+//                return
+//            }
+//            
+//            textField.text = String(str)
+//        }
+//    }
 }
 
 class CustomImageView: UIImageView {

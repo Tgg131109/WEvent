@@ -6,13 +6,16 @@
 //
 
 import UIKit
+import Firebase
 import Kingfisher
 
 class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UISearchResultsUpdating, UISearchControllerDelegate, UISearchBarDelegate {
 
+    @IBOutlet weak var activityView: CustomActivityIndicatorView!
     @IBOutlet weak var resultCountLbl: UILabel!
     @IBOutlet weak var tableView: UITableView!
     
+    var userId = Auth.auth().currentUser?.uid
     var allUserEvents = [Event]()
     var location = ""
     var isSearching = false
@@ -21,7 +24,7 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
     var searchResults = [Event]()
     var selectedEvent: Event?
     
-    var favoritesDelegate: FavoritesDelegate!
+    var favoritesDelegate: EventDataDelegate!
     var getImageDelegate: GetImageDelegate!
     
     private var searchController: UISearchController {
@@ -45,11 +48,19 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         favoritesDelegate = FirebaseHelper()
         getImageDelegate = GetImageHelper()
         
+        recentSearches = UserDefaults.standard.stringArray(forKey: "\(userId!)recentSearches") ?? [String]()
+        
         allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
         location = CurrentLocation.location!.searchStr
         resultCountLbl.text = recentSearches.isEmpty ? "Suggested Searches" : "Recent Searches"
     }
     
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        // Update user defaults.
+        UserDefaults.standard.set(recentSearches, forKey: "\(userId!)recentSearches")
+    }
     func updateSearchResults(for searchController: UISearchController) {
         let searchBar = searchController.searchBar
         
@@ -64,13 +75,23 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         isSearching = true
         
         if !searchBar.text!.isEmpty {
+            self.navigationItem.searchController?.searchBar.isHidden = true
+            activityView.activityIndicator.startAnimating()
+            activityView.isHidden = false
+            
             // Run query
             let formattedSearch = searchBar.text?.replacingOccurrences(of: " ", with: "+")
             let searchStr = ("\(formattedSearch!)+in+\(location)")
             print(searchStr)
             
             findEvents(searchStr: searchStr)
-            recentSearches.append(searchBar.text!)
+            
+            // Limit recent searches to 20 items.
+            if recentSearches.count > 19 {
+                recentSearches.removeLast()
+            }
+            
+            recentSearches.insert(searchBar.text!, at: 0)
         }
     }
     
@@ -104,11 +125,11 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
 //                        self.present(alert, animated: true, completion: nil)
                     }
                     
-                    print("Sub cannot be found.")
                     print("JSON object creation failed.")
                     return
                 }
-                // Create Subreddit object.
+                
+                // Create event object.
                 do {
                     // Create json Object from downloaded data above and cast as [String: Any].
                     if let jsonObj = try JSONSerialization.jsonObject(with: validData, options: .mutableContainers) as? [String: Any] {
@@ -142,9 +163,9 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
                             
                             let dateStr = "\(start) | \(when)"
                             let addressStr = "\(address[0]), \(address[1])"
-                            let eventImage = UIImage(named: "logo_stamp")!
+                            let eventImage = UIImage(named: "logo_placeholder")!
                             
-                            self.searchResults.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage, groupId: "", attendeeIds: [String]()))
+                            self.searchResults.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage, groupId: "", organizerId: "", attendeeIds: [String]()))
                         }
                     }
                 }
@@ -152,9 +173,13 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
                     print("Error: \(error.localizedDescription)")
                 }
                 
-                print("reloading table")
+                self.searchResults = self.searchResults.sorted(by: { $0.dateStamp < $1.dateStamp })
+                
                 DispatchQueue.main.async {
-                    self.tableView.reloadData()
+                    self.tableView.reloadSections(IndexSet([0]), with: .fade)
+                    self.activityView.activityIndicator.stopAnimating()
+                    self.activityView.isHidden = true
+                    self.navigationItem.searchController?.searchBar.isHidden = false
                 }
             })
             // Start task.
@@ -166,7 +191,7 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if isSearching {
-            resultCountLbl.text = "\(searchResults.count) events found"
+            resultCountLbl.text = searchResults.count > 1 ? "\(searchResults.count) events found" : "1 event found"
             return searchResults.count
         } else {
             resultCountLbl.text = recentSearches.isEmpty ? "Suggested Searches" : "Recent Searches"
@@ -183,7 +208,7 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
             
             cell.eventImageIV.layer.cornerRadius = 10
             cell.eventImageIV.kf.indicatorType = .activity
-            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: UIImage(named: "logo_placeholder"), options: [.transition(.fade(1))], completionHandler: { result in
                 switch result {
                 case .success(let value):
                     event.image = value.image
@@ -191,7 +216,9 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
                     break
                     
                 case .failure(let error):
-                    print("Error getting image: \(error)")
+                    if !error.isTaskCancelled && !error.isNotCurrentTask {
+                        print("Error getting image: \(error)")
+                    }
                     break
                 }
             })

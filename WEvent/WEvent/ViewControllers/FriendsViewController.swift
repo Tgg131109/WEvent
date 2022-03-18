@@ -22,16 +22,8 @@ class FriendsViewController: UIViewController, UITableViewDelegate, UITableViewD
     override func viewDidLoad() {
         super.viewDidLoad()
         
-//        let allFriends = CurrentUser.currentUser?.friends ?? [Friend]()
-//
-//        friends = allFriends.filter({ $0.status != "requested" })
-//        requests = allFriends.filter({ $0.status == "requested" })
-//
-//        friendTypeArray = [friends, requests]
-        
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(msgLblTapped(_:)))
         
-//        noFriendsLbl.isHidden = !allFriends.isEmpty
         noFriendsLbl.addGestureRecognizer(tapRecognizer)
         noFriendsLbl.layer.cornerRadius = 6
         noFriendsLbl.layer.masksToBounds = true
@@ -69,7 +61,7 @@ class FriendsViewController: UIViewController, UITableViewDelegate, UITableViewD
             noRequestsLbl.isHidden = !requests.isEmpty
         }
         
-        tableView.reloadData()
+        self.tableView.reloadSections(IndexSet([0]), with: .fade)
     }
 
     private func setResponse(requester: Friend, response: String) {
@@ -78,17 +70,17 @@ class FriendsViewController: UIViewController, UITableViewDelegate, UITableViewD
         var docRef = db.collection("users").document(userId)
         
         if response == "accepted" {
+            // Update local friend data.
+            CurrentUser.currentUser?.friends?.first(where: { $0.id == requester.id})?.status = response
+            requester.status = response
+            
+            self.friends.append(requester)
+            
             // Find document in Firebase and update status field.
             docRef.collection("friends").document(requester.id).updateData(["status": response]) { err in
                 if let err = err {
                     print("Error updating document: \(err)")
                 } else {
-                    // Update local friend data.
-                    CurrentUser.currentUser?.friends?.first(where: { $0.id == requester.id})?.status = response
-                    requester.status = response
-                    
-                    self.friends.append(requester)
-                   
                     // Update current user status for requester's friend collection in firebase.
                     docRef = db.collection("users").document(requester.id)
                     docRef.collection("friends").document(userId).updateData(["status": response]) { (error) in
@@ -101,16 +93,14 @@ class FriendsViewController: UIViewController, UITableViewDelegate, UITableViewD
                 }
             }
         } else {
+            // Update local friend data.
+            CurrentUser.currentUser?.friends?.removeAll(where: { $0.id == requester.id})
+            
             // Remove friend from Firebase.
             docRef.collection("friends").document(requester.id).delete() { err in
                 if let err = err {
                     print("Error removing document: \(err)")
                 } else {
-                    // Update local friend data.
-                    CurrentUser.currentUser?.friends?.removeAll(where: { $0.id == requester.id})
-
-                    print("Document successfully removed!")
-                    
                     // Delete current user data from requester's friend collection in firebase.
                     docRef = db.collection("users").document(requester.id)
                     docRef.collection("friends").document(userId).delete() { (error) in
@@ -125,7 +115,9 @@ class FriendsViewController: UIViewController, UITableViewDelegate, UITableViewD
         }
         
         self.requests.removeAll(where: { $0.id == requester.id})
-        tableView.reloadData()
+        self.friendTypeArray = [friends, requests]
+        self.navigationController?.tabBarController?.tabBar.items?[3].badgeValue = "\(self.requests.count)"
+        self.tableView.reloadSections(IndexSet([0]), with: .fade)
     }
     
     // MARK: - UITableViewDataSource
@@ -140,7 +132,7 @@ class FriendsViewController: UIViewController, UITableViewDelegate, UITableViewD
         let friend = dataToShow[indexPath.row]
         
         cell.userImageIV.kf.indicatorType = .activity
-        cell.userImageIV.kf.setImage(with: URL(string: friend.picUrl ?? ""), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+        cell.userImageIV.kf.setImage(with: URL(string: friend.picUrl ?? ""), placeholder: UIImage(named: "logo_placeholder"), options: [.transition(.fade(1))], completionHandler: { result in
             switch result {
             case .success(let value):
                 dataToShow[indexPath.row].profilePic = value.image
@@ -149,14 +141,18 @@ class FriendsViewController: UIViewController, UITableViewDelegate, UITableViewD
                 if self.segCon.selectedSegmentIndex == 0 {
                     self.friends[indexPath.row].profilePic = value.image
                 } else {
-                    self.requests[indexPath.row].profilePic = value.image
+                    if !self.requests.isEmpty {
+                        self.requests[indexPath.row].profilePic = value.image
+                    }
                 }
 
                 CurrentUser.currentUser?.friends?.first(where: { $0.id == friend.id})?.profilePic = value.image
                 break
                 
             case .failure(let error):
-                print("Error getting image: \(error)")
+                if !error.isTaskCancelled && !error.isNotCurrentTask {
+                    print("Error getting image: \(error)")
+                }
                 break
             }
         })
@@ -170,15 +166,15 @@ class FriendsViewController: UIViewController, UITableViewDelegate, UITableViewD
             cell.pendingLbl.isHidden = true
             
             cell.responseTapped = {(response) in
-                print(response)
-                
                 cell.declineButton.isHidden = true
                 cell.acceptButton.isHidden = true
                 
                 self.setResponse(requester: friend, response: response)
             }
-        } else if friend.status == "pending" {
-            cell.pendingLbl.isHidden = false
+        } else {
+            cell.declineButton.isHidden = true
+            cell.acceptButton.isHidden = true
+            cell.pendingLbl.isHidden = !(friend.status == "pending")
         }
         
         return cell

@@ -17,7 +17,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
     let manager = CLLocationManager()
     
     let db = Firestore.firestore()
-    let docId = Auth.auth().currentUser?.uid
+    let userId = Auth.auth().currentUser?.uid
     var docRef: DocumentReference?
     
     var useCurrentLocation = true
@@ -32,7 +32,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
     var inviteCount = 0
     var requestCount = 0
     
-    var favoritesDelegate: FavoritesDelegate!
+    var favoritesDelegate: EventDataDelegate!
     var getImageDelegate: GetImageDelegate!
     
     override func viewDidLoad() {
@@ -55,14 +55,14 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
             navIconIV.widthAnchor.constraint(equalToConstant: 40)
         ])
         
-        docRef = db.collection("users").document(docId!)
+        docRef = db.collection("users").document(userId!)
         favoritesDelegate = FirebaseHelper()
         getImageDelegate = GetImageHelper()
         
-        useCurrentLocation = UserDefaults.standard.object(forKey: "useCurrentLocation") as? Bool ?? true
+        useCurrentLocation = UserDefaults.standard.object(forKey: "\(userId!)useCurrentLocation") as? Bool ?? true
         
         if !useCurrentLocation {
-            if let preferredLocation = UserDefaults.standard.stringArray(forKey: "preferredLocation"),
+            if let preferredLocation = UserDefaults.standard.stringArray(forKey: "\(userId!)preferredLocation"),
                let lat = Double(preferredLocation[3]), let lon = Double(preferredLocation[4]) {
                 let loc = Location(city: preferredLocation[0], coordinates: [lat, lon], state: preferredLocation[1], id: preferredLocation[2])
                 
@@ -75,6 +75,10 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
         inviteCount = CurrentUser.currentUser?.userEvents?.filter({ $0.status == "invited"}).count ?? 0
         requestCount = CurrentUser.currentUser?.friends?.filter({ $0.status == "requested"}).count ?? 0
         
+        if inviteCount > 0 {
+            navigationController?.tabBarController?.tabBar.items?[2].badgeValue = "\(inviteCount)"
+        }
+        
         getUserLocation()
         setUpListeners()
         
@@ -84,6 +88,8 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
     }
     
     override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
         let prefLoc = CurrentLocation.preferredLocation
         
         if prefLoc != nil && locationStr != prefLoc!.city {
@@ -94,15 +100,15 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
         if !editEvent {
             let currentEventCount = allUserEvents.count
             let actualEventCount = CurrentUser.currentUser?.userEvents?.count
-
+            
+            CurrentUser.currentUser?.userEvents = CurrentUser.currentUser?.userEvents?.sorted(by: { $0.dateStamp < $1.dateStamp })
             allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
-            userUpcomingEvents = allUserEvents.filter({$0.status == "attending"})
+            userUpcomingEvents = allUserEvents.filter({ $0.status == "attending" && $0.isPast == false })
 
             // Reload tableView collectionView if events have been added, removed, or updated.
             if currentEventCount != actualEventCount || updateCV {
                 DispatchQueue.main.async {
                     self.tableView.reloadData()
-//                    self.tableView.reloadSections(IndexSet([0]), with: .none)
                 }
             }
         } else {
@@ -163,90 +169,121 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
     }
     
     private func setUpListeners() {
-        // Set up event listener (listening to all events that are not only favorited).
-        docRef?.collection("events").whereField("groupId", isNotEqualTo: "").addSnapshotListener { querySnapshot, error in
+        // Set up event invite response listener.
+        db.collection("groups").whereField("memberIds", arrayContains: userId!).addSnapshotListener { querySnapshot, error in
             guard let snapshot = querySnapshot else {
                 print("Error fetching documents: \(error!)")
                 return
             }
             
             snapshot.documentChanges.forEach { diff in
-                let id  = diff.document.documentID
                 let eventData = diff.document.data()
-                guard let title = eventData["title"] as? String,
-                      let date = eventData["date"] as? String,
-                      let address = eventData["address"] as? String,
-                      let link = eventData["link"] as? String,
-                      let description = eventData["description"] as? String,
-                      let tickets = eventData["tickets"] as? [[String: Any]],
-                      let imageUrl = eventData["thumbnail"] as? String,
-                      let groupId = eventData["groupId"] as? String,
-                      let attendeeIds = eventData["attendeeIds"] as? [String],
-                      let status = eventData["status"] as? String,
-                      let favorite = eventData["isFavorite"] as? Bool,
-                      let created = eventData["isCreated"] as? Bool
+                guard let eventId = eventData["eventId"] as? String,
+                      let attendeeIds = eventData["memberIds"] as? [String]
                 else {
-                    print("There was an error setting event data")
+                    print("There was an error setting event invite data")
                     return
                 }
                 
-
-                // Create Event object and add to events array.
-                let subjectEvent = Event(id: id, title: title, date: date, address: address, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: UIImage(named: "logo_stamp")!, groupId: groupId, attendeeIds: attendeeIds, status: status, isFavorite: favorite, isCreated: created)
-                
-                // User recieved event invite.
-                if (diff.type == .added) {
-                    if CurrentUser.currentUser?.userEvents?.first(where: { $0.id == id }) == nil && status == "invited" {
-                        print("Invited to event: \(title)")
-                        self.inviteCount += 1
-                        
-                        CurrentUser.currentUser?.userEvents?.append(subjectEvent)
-                        self.allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
-                        self.userUpcomingEvents = self.allUserEvents.filter({$0.status == "attending"})
-   
-                        if self.inviteCount > 0 {
-                            self.navigationController?.tabBarController?.tabBar.items?[2].badgeValue = "\(self.inviteCount)"
-                        }
-                        
-//                        self.tableView.reloadData()
-                    }
-                }
-                
-                // Some property of an event that the user is attending has changed.
+                // Invited user accepted event invitation. Some property of an event that the user is attending has changed.
                 if (diff.type == .modified) {
-                    print("Modified event: \(title)")
+                    print("Modified group")
                     
-                    if let i = self.allUserEvents.firstIndex(where: { $0.id == id}) {
-                        CurrentUser.currentUser?.userEvents?[i] = subjectEvent
-                        self.allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
-                        self.userUpcomingEvents = self.allUserEvents.filter({$0.status == "attending"})
-                        
-                        self.tableView.reloadData()
-                    }
-                }
-                
-                // Event has been removed from user's events by the event group organizer.
-                if (diff.type == .removed) {
-                    print("Removed event: \(title)")
-                    
-                    if CurrentUser.currentUser?.userEvents?.first(where: { $0.id == id}) != nil {
-                        self.inviteCount += 1
-                        
-                        CurrentUser.currentUser?.userEvents?.removeAll(where: { $0.id == id})
-                        self.allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
-                        self.userUpcomingEvents = self.allUserEvents.filter({$0.status == "attending"})
-                        
-                        if self.inviteCount > 0 {
-                            self.navigationController?.tabBarController?.tabBar.items?[2].badgeValue = "\(self.inviteCount)"
-                        }
-//                        self.tableView.reloadData()
+                    // Check if user has event favorited and update status property if so.
+                    if let i = CurrentUser.currentUser?.userEvents?.firstIndex(where: { $0.id == eventId }) {
+                        CurrentUser.currentUser?.userEvents?[i].attendeeIds = attendeeIds
                     }
                 }
             }
         }
         
-        // Set up friend listener (listening for pending and requested statuses).
-        docRef?.collection("friends").whereField("status", isNotEqualTo: "accepted").addSnapshotListener { querySnapshot, error in
+        // Set up event invite listener for updating current user events when user is invited to an event.
+        docRef?.collection("events").whereField("status", isEqualTo: "invited").addSnapshotListener { querySnapshot, error in
+            guard let snapshot = querySnapshot else {
+                print("Error fetching documents: \(error!)")
+                return
+            }
+            
+            snapshot.documentChanges.forEach { diff in
+                // User recieved event invite.
+                if (diff.type == .added) {
+                    let eId  = diff.document.documentID
+                    let inviteData = diff.document.data()
+                    guard let groupId = inviteData["groupId"] as? String,
+                          let status = inviteData["status"] as? String
+                    else {
+                        print("There was an error setting event data")
+                        return
+                    }
+                    
+                    // Get group from invite.
+                    self.db.collection("groups").document(groupId).getDocument { (gDoc, error) in
+                        if let gDoc = gDoc, gDoc.exists {
+                            guard let eventData = gDoc.data(),
+                                  let attendeeIds = eventData["memberIds"] as? [String],
+                                  let organizerId = eventData["organizerId"] as? String
+                            else {
+                                print("There was an error setting group data from invite")
+                                return
+                            }
+                            
+                            // Check if user has event favorited and update status property if so.
+                            if let i = CurrentUser.currentUser?.userEvents?.firstIndex(where: { $0.id == eId }) {
+                                if CurrentUser.currentUser?.userEvents?[i].status == "" {
+                                    // Update existing event.
+                                    CurrentUser.currentUser?.userEvents?[i].groupId = groupId
+                                    CurrentUser.currentUser?.userEvents?[i].attendeeIds = attendeeIds
+                                    CurrentUser.currentUser?.userEvents?[i].organizerId = organizerId
+                                    CurrentUser.currentUser?.userEvents?[i].status = "invited"
+                                    
+                                    print("Updated favorite event status")
+                                    
+                                    self.inviteCount += 1
+                                    self.navigationController?.tabBarController?.tabBar.items?[2].badgeValue = self.inviteCount > 0 ? "\(self.inviteCount)" : nil
+                                }
+                            } else {
+                                // Get event from invite
+                                self.db.collection("events").document(eId).getDocument { (eDoc, error) in
+                                    if let eDoc = eDoc, eDoc.exists {
+                                        guard let eventData = eDoc.data(),
+                                              let title = eventData["title"] as? String,
+                                              let date = eventData["date"] as? String,
+                                              let address = eventData["address"] as? String,
+                                              let link = eventData["link"] as? String,
+                                              let description = eventData["description"] as? String,
+                                              let tickets = eventData["tickets"] as? [[String: Any]],
+                                              let imageUrl = eventData["thumbnail"] as? String
+                                        else {
+                                            print("There was an error setting event data from invite")
+                                            return
+                                        }
+                                        
+                                        // Create Event object and add to events array.
+                                        CurrentUser.currentUser?.userEvents?.append(Event(id: eId, title: title, date: date, address: address, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: UIImage(named: "logo_placeholder")!, groupId: groupId, organizerId: organizerId, attendeeIds: attendeeIds, status: status, isFavorite: false, isCreated: false))
+                                        
+                                        self.inviteCount += 1
+                                        self.navigationController?.tabBarController?.tabBar.items?[2].badgeValue = self.inviteCount > 0 ? "\(self.inviteCount)" : nil
+                                    } else {
+                                        print("Invite document does not exist")
+                                    }
+                                }
+                            }
+                        } else {
+                            print("Invite document does not exist")
+                        }
+                    }
+                }
+                
+                // Event has been removed from user's events by the event group organizer.
+                if (diff.type == .removed) {
+                    self.inviteCount -= 1
+                    self.navigationController?.tabBarController?.tabBar.items?[2].badgeValue = self.inviteCount > 0 ? "\(self.inviteCount)" : nil
+                }
+            }
+        }
+        
+        // Set up friend listener (listening for pending, requested, and active statuses).
+        docRef?.collection("friends").whereField("status", isNotEqualTo: "").addSnapshotListener { querySnapshot, error in
             guard let snapshot = querySnapshot else {
                 print("Error fetching documents: \(error!)")
                 return
@@ -265,7 +302,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                 }
                 
                 // Create User object and add to events array.
-                let subjectFriend = Friend(id: diff.document.documentID, profilePic: UIImage(named: "logo_stamp")!, firstName: fName, lastName: lName, email: email, status: status)
+                let subjectFriend = Friend(id: diff.document.documentID, profilePic: UIImage(named: "logo_placeholder")!, firstName: fName, lastName: lName, email: email, status: status)
                 
                 // Get user image.
                 let storageRef = Storage.storage().reference().child("users").child(subjectFriend.id).child("profile.png")
@@ -283,34 +320,43 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                 
                 // User recieved friend request.
                 if (diff.type == .added) {
-                    if CurrentUser.currentUser?.friends?.first(where: { $0.id == diff.document.documentID}) == nil && status == "requested" {
-                        print("New friend: \(subjectFriend.fullName)")
-                        
-                        CurrentUser.currentUser?.friends?.append(subjectFriend)
-                        
-                        self.requestCount += 1
-                        
-                        if self.requestCount > 0 {
-                            self.navigationController?.tabBarController?.tabBar.items?[3].badgeValue = "\(self.requestCount)"
+                    if CurrentUser.currentUser?.friends?.first(where: { $0.id == diff.document.documentID }) == nil {
+                        if status == "requested" {
+                            print("I recieved a friend request: \(subjectFriend.fullName)")
+                            CurrentUser.currentUser?.friends?.append(subjectFriend)
+                            self.requestCount += 1
+                            self.navigationController?.tabBarController?.tabBar.items?[3].badgeValue = self.requestCount > 0 ? "\(self.requestCount)" : nil
                         }
                     }
                 }
                 
-                // Requested user accepted friend request (pending -> accepted).
-                if (diff.type == .modified) {
-                    print("Modified friend: \(subjectFriend.fullName)")
-                    
-                    if let i = CurrentUser.currentUser?.friends?.firstIndex(where: { $0.id == diff.document.documentID}) {
-                        CurrentUser.currentUser?.friends?[i] = subjectFriend
+                // Current user or requested user accepted friend request.
+                if diff.type == .modified {
+                    if let i = CurrentUser.currentUser?.friends?.firstIndex(where: { $0.id == diff.document.documentID }) {
+                        if let localStatus = CurrentUser.currentUser?.friends?[i].status {
+                            if localStatus == "accepted" {
+                                print("I accepted friend: \(subjectFriend.fullName) | \(subjectFriend.status)")
+                                // Update or remove badge
+                                self.requestCount -= 1
+                                self.navigationController?.tabBarController?.tabBar.items?[3].badgeValue = self.requestCount > 0 ? "\(self.requestCount)" : nil
+                            } else if localStatus == "pending" {
+                                print("Friend accepted: \(subjectFriend.fullName) | \(subjectFriend.status)")
+                                CurrentUser.currentUser?.friends?[i].status = "accepted"
+                            }
+                        }
                     }
                 }
                 
-                // Requested user declined friend request.
+                // Current user or requested user denied friend request.
                 if (diff.type == .removed) {
-                    print("Removed friend: \(subjectFriend.fullName)")
-                    
-                    if CurrentUser.currentUser?.friends?.first(where: { $0.id == diff.document.documentID}) != nil {
-                        CurrentUser.currentUser?.friends?.removeAll(where: { $0.id == diff.document.documentID})
+                    if status == "requested" {
+                        print("I declined friend: \(subjectFriend.fullName) | \(subjectFriend.status)")
+                        // Update or remove badge.
+                        self.requestCount -= 1
+                        self.navigationController?.tabBarController?.tabBar.items?[3].badgeValue = self.requestCount > 0 ? "\(self.requestCount)" : nil
+                    } else if status == "pending" {
+                        print("Friend declined: \(subjectFriend.fullName) | \(subjectFriend.status)")
+                        CurrentUser.currentUser?.friends?.removeAll(where: { $0.id == diff.document.documentID })
                     }
                 }
             }
@@ -382,15 +428,17 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                             
                             let dateStr = "\(start) | \(when)"
                             let addressStr = "\(address[0]), \(address[1])"
-                            let eventImage = UIImage(named: "logo_stamp")!
+                            let eventImage = UIImage(named: "logo_placeholder")!
        
-                            self.localEvents.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage, groupId: "", attendeeIds: [String]()))
+                            self.localEvents.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage, groupId: "", organizerId: "", attendeeIds: [String]()))
                         }
                     }
                 }
                 catch{
                     print("Error: \(error.localizedDescription)")
                 }
+                
+                self.localEvents = self.localEvents.sorted(by: { $0.dateStamp < $1.dateStamp })
                 
                 DispatchQueue.main.async {
                     self.tableView.reloadSections(IndexSet([1]), with: .fade)
@@ -448,7 +496,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
             
             cell.eventImageIV.layer.cornerRadius = 10
             cell.eventImageIV.kf.indicatorType = .activity
-            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: UIImage(named: "logo_placeholder"), options: [.transition(.fade(1))], completionHandler: { result in
                 switch result {
                 case .success(let value):
                     event.image = value.image
@@ -456,8 +504,10 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                     break
                     
                 case .failure(let error):
-                    print("event: \(event.title)")
-                    print("Error getting tv image: \(error)")
+                    if !error.isTaskCancelled && !error.isNotCurrentTask {
+                        print("event: \(event.title)")
+                        print("Error getting tv image: \(error)")
+                    }
                     break
                 }
             })
@@ -467,16 +517,16 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
             cell.favButton.isSelected = allUserEvents.filter({$0.isFavorite == true}).contains(where: {$0.title == event.title})
             cell.favButton.tintColor = cell.favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
             
-            cell.favTapped = {(favButton) in
+            cell.favTapped = { (favButton) in
                 var updateEvent: Event?
                 // Set event to be updated.
-                if let index = self.allUserEvents.firstIndex(where: { $0.title == event.title }) {
+                if let index = CurrentUser.currentUser?.userEvents?.firstIndex(where: { $0.title == event.title && $0.link == event.link }) {
                     // If event is contained in user's events, pass that event instead.
                     // This ensures correct information is shown on DetailsViewController.
-                    self.allUserEvents[index].isFavorite = !favButton.isSelected
-                    updateEvent = self.allUserEvents[index]
+                    updateEvent = CurrentUser.currentUser?.userEvents?[index]
                 } else {
-                    updateEvent = event
+                    // Create a copy of the event to prevent modifying the underlying data.
+                    updateEvent = Event(id: event.id, title: event.title, date: event.date, address: event.address, link: event.link, description: event.description, tickets: event.tickets, imageUrl: event.imageUrl, image: event.image, groupId: event.groupId, organizerId: event.organizerId, attendeeIds: event.attendeeIds)
                 }
                 
                 self.favoritesDelegate.setFavorite(event: updateEvent!, isFav: !favButton.isSelected)
@@ -507,14 +557,30 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         // Deselect row for animation purposes.
         self.tableView.deselectRow(at: indexPath, animated: true)
-        
+
         let localEvent = localEvents[indexPath.row]
         
         // Set selected event to be passed to DetailsViewController
-        if let index = allUserEvents.firstIndex(where: { $0.title == localEvent.title }) {
-            // If event is contained in user's events, pass that event instead.
-            // This ensures correct information is shown on DetailsViewController.
-            selectedEvent = allUserEvents[index]
+        // If event is contained in user's events, pass that event instead.
+        // This ensures correct information is shown on DetailsViewController.
+        if let index = CurrentUser.currentUser?.userEvents?.firstIndex(where: { $0.title == localEvent.title && $0.link == localEvent.link }) {
+            if localEvent.imageUrl != CurrentUser.currentUser?.userEvents?[index].imageUrl {
+                CurrentUser.currentUser?.userEvents?[index].imageUrl = localEvent.imageUrl
+                CurrentUser.currentUser?.userEvents?[index].image = localEvent.image
+                
+                // Update event thumbnail (imageUrl) in Firebase "events" collection.
+                if let eId = CurrentUser.currentUser?.userEvents?[index].id {
+                    db.collection("events").document(eId).updateData(["thumbnail": localEvent.imageUrl]) { err in
+                        if let err = err {
+                            print("Error updating thumbnail: \(err)")
+                        } else {
+                            print("Event thumbnail successfully updated in Firebase.")
+                        }
+                    }
+                }
+            }
+            
+            selectedEvent = CurrentUser.currentUser?.userEvents?[index]
         } else {
             selectedEvent = localEvent
         }
@@ -537,7 +603,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "coll_cell_1", for: indexPath) as! CustomCollectionViewCell
         
         if indexPath.row == collectionView.numberOfItems(inSection: 0) - 1 {
-            cell.eventImageIV.image = UIImage(named: "logo_stamp")
+            cell.eventImageIV.image = UIImage(named: "logo_placeholder")
             cell.eventDateLbl.isHidden = true
             cell.eventTitleLbl.text = "Find an event or create one of your own"
             cell.eventTitleLbl.textColor = UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1)
@@ -546,7 +612,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
             let event = userUpcomingEvents[indexPath.row]
 
             cell.eventImageIV.kf.indicatorType = .activity
-            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: event.image, options: [.transition(.fade(1))], completionHandler: { result in
                 switch result {
                 case .success(let value):
                     event.image = value.image
@@ -555,8 +621,10 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                     break
                     
                 case .failure(let error):
-                    print("event: \(event.title)")
-                    print("Error getting cv image: \(error)")
+                    if !error.isTaskCancelled && !error.isNotCurrentTask {
+                        print("event: \(event.title)")
+                        print("Error getting cv image: \(error)")
+                    }
                     break
                 }
             })
@@ -623,6 +691,9 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                 destination.event = self.selectedEvent
                 destination.editEvent = {
                     self.editEvent = true
+                }
+                destination.updateCV = {
+                    self.updateCV = true
                 }
             }
         }

@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import Firebase
 
 class LocationPreferencesViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
 
@@ -104,6 +105,7 @@ class LocationPreferencesViewController: UIViewController, UITableViewDelegate, 
     }
     
     @IBAction func savePreferences(_ sender: UIButton) {
+        let userId = Auth.auth().currentUser?.uid
         // Check that provided city is set.
         if !currentLocationSW.isOn && selectedCity != nil {
             CurrentLocation.preferredLocation = selectedCity
@@ -115,7 +117,7 @@ class LocationPreferencesViewController: UIViewController, UITableViewDelegate, 
             let locationData = [selectedCity?.city, selectedCity?.state, selectedCity?.id, latStr, lonStr]
             
             // Update user defaults.
-            UserDefaults.standard.set(locationData, forKey: "preferredLocation")
+            UserDefaults.standard.set(locationData, forKey: "\(userId!)preferredLocation")
         } else {
             if currentLocationSW.isOn {
                 CurrentLocation.preferredLocation = CurrentLocation.location
@@ -125,7 +127,7 @@ class LocationPreferencesViewController: UIViewController, UITableViewDelegate, 
         }
         
         // Update user defaults.
-        UserDefaults.standard.set(currentLocationSW.isOn, forKey: "useCurrentLocation")
+        UserDefaults.standard.set(currentLocationSW.isOn, forKey: "\(userId!)useCurrentLocation")
         
         self.dismiss(animated: true, completion: nil)
     }

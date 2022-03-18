@@ -41,6 +41,9 @@ class ProfileViewController: UIViewController {
 
         // Ensure user is signed out.
         if FirebaseAuth.Auth.auth().currentUser == nil {
+            CurrentUser.currentUser = nil
+            CurrentLocation.location = nil
+            CurrentLocation.preferredLocation = nil
             // Dismiss entire tabController and return to SignInViewController.
             self.dismiss(animated: true, completion: nil)
         }

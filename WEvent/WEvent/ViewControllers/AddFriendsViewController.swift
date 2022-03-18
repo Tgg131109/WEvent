@@ -156,7 +156,7 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
         }
         
         // Create Friend object and add to results array.
-        searchResults.append(Friend(id: document.documentID, profilePic: UIImage(named: "logo_stamp")!, firstName: fName, lastName: lName, email: email, status: ""))
+        searchResults.append(Friend(id: document.documentID, profilePic: UIImage(named: "logo_placeholder")!, firstName: fName, lastName: lName, email: email, status: ""))
         getUserImage(docId: document.documentID)
     }
     
@@ -173,7 +173,7 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
                     // Get the download URL.
                     self.searchResults.first(where: { $0.id == docId })?.picUrl = url.absoluteString
                     self.tableView.reloadData()
-                    self.resultCountLbl.text = "\(self.searchResults.count) users found"
+                    self.resultCountLbl.text = self.searchResults.count > 1 ? "\(self.searchResults.count) users found" : "1 user found"
                 }
             }
         }
@@ -229,7 +229,7 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
         let user = searchResults[indexPath.row]
         
         cell.userImageIV.kf.indicatorType = .activity
-        cell.userImageIV.kf.setImage(with: URL(string: user.picUrl ?? ""), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+        cell.userImageIV.kf.setImage(with: URL(string: user.picUrl ?? ""), placeholder: UIImage(named: "logo_placeholder"), options: [.transition(.fade(1))], completionHandler: { result in
             switch result {
             case .success(let value):
                 user.profilePic = value.image
@@ -237,7 +237,9 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
                 break
                 
             case .failure(let error):
-                print("Error getting image: \(error)")
+                if !error.isTaskCancelled && !error.isNotCurrentTask {
+                    print("Error getting image: \(error)")
+                }
                 break
             }
         })
@@ -255,6 +257,7 @@ class AddFriendsViewController: UIViewController, UITableViewDelegate, UITableVi
                 self.requestedFriends.removeAll(where: { $0.id == user.id})
             }
             
+            self.requestBtn.setTitle(self.requestedFriends.count > 1 ? "Send Requests" : "Send Request", for: .normal)
             self.requestBtn.isEnabled = !self.requestedFriends.isEmpty
         }
 

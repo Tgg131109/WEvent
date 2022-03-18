@@ -18,33 +18,53 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
     
     let db = Firestore.firestore()
     let userId = Auth.auth().currentUser?.uid
-    var docRef: DocumentReference?
- 
+    var collRef: CollectionReference?
+    
     var images = [UIImage]()
     var imageUrls = [String]()
+    var imageAssocs = [Int]()
+    var imageCredits = [[String: UIImage]]()
     
     var eventId: String?
     var eventTitle: String?
     var eventGroupId: String?
     var eventAttendeeIds: [String]?
-    var urlsToAdd = [String]()
+    var memberProfilePics = [UIImage]()
+    var urlCount = 0
+    var userUrls = [String]()
     var selectedIP = IndexPath()
+    
+    var getPhotos = true
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        navigationController?.title = eventTitle
-
-        docRef = db.collection("users").document(eventGroupId!).collection("events").document(eventId!)
+        self.title = eventTitle
         
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(msgLblTapped(_:)))
         
         msgLbl.addGestureRecognizer(tapRecognizer)
         msgLbl.layer.cornerRadius = 6
         msgLbl.layer.masksToBounds = true
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
         
-        getImagesFromStorage()
-        
+        if getPhotos {
+            if eventAttendeeIds != nil {
+                for memberId in eventAttendeeIds! {
+                    if memberId == userId {
+                        memberProfilePics.append(CurrentUser.currentUser?.profilePic ?? UIImage(named: "logo_stamp")!)
+                    } else {
+                        memberProfilePics.append(CurrentUser.currentUser?.friends?.first(where: { $0.id == memberId })?.profilePic ?? UIImage(named: "logo_stamp")!)
+                    }
+                }
+            }
+            
+            collRef = db.collection("groups").document(eventGroupId!).collection("images")
+            getImagesFromStorage()
+        }
     }
     
     @objc func msgLblTapped(_ sender: Any) {
@@ -128,7 +148,7 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
         activityView.isHidden = false
 
         for id in eventAttendeeIds! {
-            docRef!.collection("images").document(id).getDocument { (document, error) in
+            collRef?.document(id).getDocument { (document, error) in
                 if let document = document, document.exists {
                     // Get image url strings from Firebase.
                     let data = document.data()
@@ -138,29 +158,43 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
                         return
                     }
                     
+                    if id == self.userId {
+                        self.userUrls = userImages
+                    }
+                    
                     for urlStr in userImages {
                         self.imageUrls.append(urlStr)
                         self.images.append(UIImage(named: "logo_stamp")!)
                         
+                        if id == self.userId {
+                            self.imageCredits.append(["You": UIImage(named: "logo_stamp")!])
+                        } else {
+                            self.imageCredits.append([CurrentUser.currentUser?.friends?.first(where: { $0.id == id })?.firstName ?? "A friend": UIImage(named: "logo_stamp")!])
+                        }
+                        
+                        if let i = self.eventAttendeeIds?.firstIndex(where: { $0 == id }) {
+                            self.imageAssocs.append(i)
+                        }
+                        
                         if !self.images.isEmpty {
                             self.msgLbl.isHidden = true
                         }
-
+                        
                         DispatchQueue.main.async {
                             self.mediaCV.reloadData()
                         }
                     }
                 } else {
-                    print("Document does not exist")
-                    
-                    DispatchQueue.main.async {
-                        self.activityView.isHidden = true
-                        self.activityView.activityIndicator.stopAnimating()
-                        
-                        self.navigationController?.isNavigationBarHidden = false
-                    }
+                    print("User has no photos for this event")
                 }
             }
+        }
+        
+        DispatchQueue.main.async {
+            self.activityView.isHidden = true
+            self.activityView.activityIndicator.stopAnimating()
+            
+            self.navigationController?.isNavigationBarHidden = false
         }
     }
     
@@ -171,12 +205,11 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
         let imageData = scaledImg.pngData()
         
         self.images.append(scaledImg)
-        self.mediaCV.reloadData()
+        self.imageCredits.append(["You": scaledImg])
+        self.mediaCV.reloadSections(IndexSet([0]))
         
-        if !self.images.isEmpty {
-            self.msgLbl.isHidden = true
-        }
-        
+        self.msgLbl.isHidden = !self.images.isEmpty
+      
         let fileName = "\(UUID().uuidString).png"
         
         // Save event image to Firebase Storage.
@@ -189,17 +222,19 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
             if error == nil, metaData != nil {
                 storageRef.downloadURL { url, error in
                     if let url = url {
-                        self.urlsToAdd.append(url.absoluteString)
+                        self.urlCount += 1
+                        self.userUrls.append(url.absoluteString)
+                        self.imageUrls.append(url.absoluteString)
                         
-                        if self.urlsToAdd.count == imgCount {
+                        if self.urlCount == imgCount {
                             // Add image url strings to Firebase event or merge data if document already exists.
-                            self.docRef!.collection("images").document(self.userId!).setData(["imageUrls": self.urlsToAdd], merge: true) { (error) in
+                            self.collRef?.document(self.userId!).setData(["imageUrls": self.userUrls]) { (error) in
                                 if let error = error {
-                                    print("Error saving images: \(error)")
+                                    print("Error saving image: \(error)")
                                 } else {
-                                    print("Images successfully saved.")
+                                    print("Image successfully saved.")
                                     
-                                    self.urlsToAdd.removeAll()
+                                    self.urlCount = 0
                                 }
                             }
                         }
@@ -224,19 +259,32 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "coll_cell_2", for: indexPath) as! ImageCollectionViewCell
-        
-        cell.imageIV.kf.indicatorType = .activity
-        cell.imageIV.kf.setImage(with: URL(string: imageUrls[indexPath.row]), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
-            switch result {
-            case .success(let value):
-                self.images[indexPath.row] = value.image
-                break
-                
-            case .failure(let error):
-                print("Error getting image: \(error)")
-                break
-            }
-        })
+
+        if imageUrls.count > indexPath.row {
+            cell.imageIV.kf.indicatorType = .activity
+            cell.imageIV.kf.setImage(with: URL(string: imageUrls[indexPath.row]), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+                switch result {
+                case .success(let value):
+                    self.images[indexPath.row] = value.image
+                    
+                    let keys = self.imageCredits[indexPath.row].keys
+                    
+                    self.imageCredits[indexPath.row][keys.first!] = value.image
+                    break
+                    
+                case .failure(let error):
+                    if !error.isTaskCancelled && !error.isNotCurrentTask {
+                        print("Error getting image: \(error)")
+                    }
+                    break
+                }
+            })
+            
+            cell.userIV.image = memberProfilePics[imageAssocs[indexPath.row]]
+        } else {
+            cell.imageIV.image = images[indexPath.row]
+            cell.userIV.image = CurrentUser.currentUser?.profilePic
+        }
         
         if collectionView.numberOfItems(inSection: 0) > 0 && !activityView.isHidden {
             activityView.isHidden = true
@@ -249,7 +297,6 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
     }
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        print("selected \(indexPath)")
         selectedIP = indexPath
         self.performSegue(withIdentifier: "goToImage", sender: self)
     }
@@ -275,7 +322,10 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
         if let destination = segue.destination as? ImageScrollViewController {
             // Send selected event and userEvents array to DetailsViewController.
             destination.images = self.images
+            destination.imageCredits = self.imageCredits
             destination.imageIndex = self.selectedIP
+            
+            self.getPhotos = false
         }
     }
 }

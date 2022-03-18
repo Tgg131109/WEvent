@@ -16,7 +16,7 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
     @IBOutlet weak var backButtonView: UIView!
     @IBOutlet weak var imageIV: UIImageView!
     @IBOutlet weak var editButton: UIButton!
-    @IBOutlet weak var titleLbl: UILabel!
+    @IBOutlet weak var titleView: CustomActivityIndicatorView!
     @IBOutlet weak var dateLbl: UILabel!
     @IBOutlet weak var priceLbl: UILabelTapableLinks!
     @IBOutlet weak var locationLbl: UILabel!
@@ -34,11 +34,13 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
     @IBOutlet weak var attendeeIV7: UIImageView!
     @IBOutlet weak var additonalAttendeesLbl: UILabel!
     @IBOutlet weak var stdButtonView: UIView!
+    @IBOutlet weak var stdBtnDisableView: CustomActivityIndicatorView!
     @IBOutlet weak var addButton: UIButton!
     @IBOutlet weak var notGoingButton: UIButton!
     @IBOutlet weak var memoriesButton: UIButton!
     @IBOutlet weak var shareButton: UIButton!
     @IBOutlet weak var favButton: UIButton!
+    @IBOutlet weak var pendingBtnDisableView: CustomActivityIndicatorView!
     @IBOutlet weak var pendingButtonView: UIView!
     @IBOutlet weak var declineButton: UIButton!
     @IBOutlet weak var acceptButton: UIButton!
@@ -48,7 +50,6 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
     var docRef: DocumentReference?
     
     var event: Event?
-    var allUserEvents = [Event]()
     var eventId = ""
     var eventImgURL = ""
     var eventTitle = ""
@@ -58,8 +59,10 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
     var eventTickets = [[String: Any]]()
     var eventDescription = ""
     var eventGroupId = ""
+    var eventOrganizerId = ""
     var eventAttendeeIds = [String]()
     var attendeeIVs = [UIImageView]()
+    var eventStatus = ""
     var isFav = Bool()
     var isCreated = Bool()
     var metadata: LPLinkMetadata?
@@ -67,26 +70,35 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
     var shouldEdit = false
     var editEvent: (() -> Void)?
 
-    var favoritesDelegate: FavoritesDelegate!
+    var eventDataDelegate: EventDataDelegate!
+    
+    var updateCV: (() -> Void)?
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
         docRef = db.collection("users").document(userId!)
-        favoritesDelegate = FirebaseHelper()
+        eventDataDelegate = FirebaseHelper()
         
         populateFields()
         configureMapView()
 
         backButtonView.layer.cornerRadius = 10
         backButtonView.layer.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+        
+        if let past = event?.isPast, past == true, event?.status == "attending" {
+            inviteBtn.isHidden = true
+            notGoingButton.isEnabled = false
+            performSegue(withIdentifier: "goToMemories", sender: self)
+        }
     }
     
     override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
         self.navigationController?.isNavigationBarHidden = true
         
-        let buttonViewToShow = event?.status == "pending" ? pendingButtonView : stdButtonView
+        let buttonViewToShow = event?.status == "invited" ? pendingButtonView : stdButtonView
         
         view.addSubview(buttonViewToShow!)
         
@@ -119,60 +131,110 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
     }
     
     @IBAction func addButtonTapped(_ sender: UIButton) {
-        // Add event to userEvents array.
+        stdBtnDisableView.statusLbl.text = "Adding Event..."
+        stdBtnDisableView.isHidden = false
+        
         if event != nil && docRef != nil {
-            // Action if event is already saved as a favorite.
-            if self.isFav {
-                // Find document in Firebase and update status field.
-                self.docRef!.collection("events").document(self.eventId).updateData(["status": "attending"]) { err in
-                    if let err = err {
-                        print("Error updating document: \(err)")
-                    } else {
-                        // Update event status property and update current user's events to match.
-                        if let index = self.allUserEvents.firstIndex(where: { $0.id == self.eventId }) {
-                            self.allUserEvents[index].status = "attending"
-                            self.allUserEvents[index].groupId = self.userId!
-                            self.allUserEvents[index].attendeeIds = [self.userId!]
-                            
-                            CurrentUser.currentUser?.userEvents = self.allUserEvents
-                            
-                            print("Document successfully updated")
-                        }
-                    }
+            // Check that an event invite for this event has not been sent while the user is viewing event.
+            if CurrentUser.currentUser?.userEvents?.first(where: { $0.title == self.eventTitle && $0.link == self.eventLink})?.status == "invited" {
+                if let e = CurrentUser.currentUser?.userEvents?.first(where: { $0.title == self.eventTitle && $0.link == self.eventLink}) {
+                    // Update current event.
+                    eventStatus = e.status
+                    eventGroupId = e.groupId
+                    eventOrganizerId = e.organizerId
+                    eventAttendeeIds = e.attendeeIds
+                    
+                    swapButtonSet(buttonSetView: self.pendingButtonView)
+                    
+                    // Get inviter from current user's friend array.
+                    let inviter = CurrentUser.currentUser?.friends?.first(where: { $0.id == e.organizerId })?.firstName
+                    
+                    // Create alert.
+                    let alert = UIAlertController(title: "Pending Invite", message: "\(inviter ?? "A friend") has invited you to this event and is awaiting your response. ", preferredStyle: .alert)
+                    // Add action to alert controller.
+                    alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                    // Show alert.
+                    self.present(alert, animated: true, completion: nil)
                 }
             } else {
-                // Add event to user's events in Firebase.
-                let data: [String: Any] = ["thumbnail": eventImgURL, "title": eventTitle, "date": eventDate, "tickets": eventTickets, "address": eventAddress, "link": eventLink, "description": eventDescription, "groupID": userId!, "attendeeIds": [userId!], "status": "attending", "isCreated": false, "isFavorite": false]
-                var ref: DocumentReference?
-                
-                ref = docRef!.collection("events").addDocument(data: data) { (error) in
-                    if let error = error {
-                        print("Error: \(error.localizedDescription)")
-                    } else {
-                        if let id = ref?.documentID {
-                            self.event?.id = id
-                            
-                            self.allUserEvents.append(self.event!)
-                            CurrentUser.currentUser?.userEvents = self.allUserEvents
-                            
-                            // Update visible buttons.
-                            self.addButton.isHidden = true
-                            self.notGoingButton.isHidden = false
-                            self.memoriesButton.isHidden = false
-                            
-                            print("Document added with ID: \(id)")
+                // Action if event is already saved as a favorite.
+                if self.isFav {
+                    // If an event has just been added as a favorite, it will not have an id.
+                    // Check if the event's id property is empty and attempt to get it if it exists in user's userEvents array.
+                    if self.eventId.isEmpty {
+                        if let eId = CurrentUser.currentUser?.userEvents?.first(where: { $0.title == self.eventTitle && $0.link == self.eventLink})?.id {
+                            self.eventId = eId
+                        } else {
+                            print("Event cannot be added at this time")
+                            stdBtnDisableView.isHidden = true
+                            return
+                        }
+                    }
+                    
+                    // Create new group in Firebase and update user's event.
+                    self.eventDataDelegate.addFirebaseGroup(eventId: self.eventId) { gId in
+                        // Find document in Firebase and update status field.
+                        self.docRef!.collection("events").document(self.eventId).updateData(["status": "attending", "groupId": gId]) { err in
+                            if let err = err {
+                                print("Error updating document: \(err)")
+                                self.stdBtnDisableView.isHidden = true
+                            } else {
+                                // Update event status property and update current user's events to match.
+                                if let index = CurrentUser.currentUser?.userEvents?.firstIndex(where: { $0.id == self.eventId }) {
+                                    // Update displayed event.
+                                    self.event?.status = "attending"
+                                    self.event?.groupId = gId
+                                    self.event?.organizerId = self.userId!
+                                    self.event?.attendeeIds = [self.userId!]
+                                    
+                                    self.eventGroupId = gId
+                                    self.eventOrganizerId = self.userId!
+                                    
+                                    CurrentUser.currentUser?.userEvents?[index] = self.event!
+                                    
+                                    print("Document successfully updated")
+                                    
+                                    self.updateVisibleButtons(going: true)
+                                    self.updateCV?()
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Check if event already exists in Firebase "events" collection.
+                    let collRef = db.collection("events")
+                    
+                    collRef.whereField("title", isEqualTo: eventTitle).whereField("link", isEqualTo: eventLink).getDocuments { (querySnapshot, err) in
+                        if let err = err {
+                            print("Error getting documents: \(err)")
+                            self.stdBtnDisableView.isHidden = true
+                        } else {
+                            // If event already exists, just add a reference to it to the user's "events" collection.
+                            if let querySnapshot = querySnapshot, !querySnapshot.isEmpty {
+                                let docId = querySnapshot.documents[0].documentID
+                                
+                                self.saveEventToFirebase(eventId: docId)
+                            } else {
+                                // Add event to Firebase "events" collection.
+                                let data: [String: Any] = ["thumbnail": self.eventImgURL, "title": self.eventTitle, "date": self.eventDate, "tickets": self.eventTickets, "address": self.eventAddress, "link": self.eventLink, "description": self.eventDescription]
+                                
+                                var ref: DocumentReference?
+                                
+                                ref = collRef.addDocument(data: data) { (error) in
+                                    if let error = error {
+                                        print("Error: \(error.localizedDescription)")
+                                        self.stdBtnDisableView.isHidden = true
+                                    } else {
+                                        if let docId = ref?.documentID {
+                                            self.saveEventToFirebase(eventId: docId)
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
-            
-            // Update displayed event.
-            self.event?.status = "attending"
-            self.event?.groupId = self.userId!
-            self.event?.attendeeIds = [self.userId!]
-            
-            // Show attendee information.
-            showAttendees()
         }
     }
 
@@ -191,38 +253,13 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
         // Add actions to alert controller.
         alert.addAction(UIAlertAction(title: "Keep", style: .cancel, handler: nil))
         alert.addAction(UIAlertAction(title: "Remove", style: .destructive, handler: { action in
-            if self.isCreated {
+            self.stdBtnDisableView.statusLbl.text = "Removing Event..."
+            self.stdBtnDisableView.isHidden = false
+                        
+            if self.isCreated || !self.isFav {
                 self.deleteFirebaseEvent()
-            } else {
-                if self.isFav {
-                    // Find document in Firebase and update status field.
-                    self.docRef!.collection("events").document(self.eventId).updateData(["status": "", "groupId": "", "attendeeIds": [String]()]) { err in
-                        if let err = err {
-                            print("Error updating document: \(err)")
-                        } else {
-                            // Update event status property and update current user's events to match.
-                            if let index = self.allUserEvents.firstIndex(where: { $0.id == self.eventId }) {
-                                self.allUserEvents[index].status = ""
-                                CurrentUser.currentUser?.userEvents = self.allUserEvents
-                                
-                                print("Document successfully updated")
-                            }
-                        }
-                    }
-                } else {
-                    self.deleteFirebaseEvent()
-                }
-            }
-            
-            // Hide attendee information.
-            self.groupLbl.isHidden = true
-            self.inviteBtn.isHidden = true
-            self.additonalAttendeesLbl.isHidden = true
-            
-            for iv in self.attendeeIVs {
-                if !iv.isHidden {
-                    iv.isHidden = true
-                }
+            } else if self.isFav {
+                self.notGoingToFavoritedEvent(disableButtonView: self.stdBtnDisableView)
             }
         }))
         
@@ -249,9 +286,79 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
     
     @IBAction func favButtonTapped(_ sender: UIButton) {
         if event != nil {
-            favoritesDelegate.setFavorite(event: event!, isFav: !favButton.isSelected)
+            eventDataDelegate.setFavorite(event: event!, isFav: !favButton.isSelected)
+            
+            self.isFav = !favButton.isSelected
+            
             favButton.isSelected.toggle()
             favButton.tintColor = favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
+            
+            self.updateCV?()
+        }
+    }
+    
+    @IBAction func acceptBtnTapped(_ sender: UIButton) {
+        // Check if group still exists (group organizer hasn't removed event).
+        db.collection("groups").document(eventGroupId).getDocument { (document, error) in
+            if let document = document, document.exists {
+                self.pendingBtnDisableView.isHidden = false
+                
+                // Find document in Firebase and update status field.
+                self.docRef!.collection("events").document(self.eventId).updateData(["status": "attending"]) { err in
+                    if let err = err {
+                        print("Error updating document: \(err)")
+                        self.pendingBtnDisableView.isHidden = true
+                    } else {
+                        // Add current user's user id to group attendeeIds array in Firebase.
+                        self.db.collection("groups").document(self.eventGroupId).updateData(["memberIds": FieldValue.arrayUnion([self.userId!])]) { error in
+                            if let error = error {
+                                print("Error updating document: \(error)")
+                                self.pendingBtnDisableView.isHidden = true
+                            } else {
+                                // Update event properties and update current user's events to match.
+                                if let index = CurrentUser.currentUser?.userEvents?.firstIndex(where: { $0.id == self.eventId }) {
+                                    // Update displayed event.
+                                    self.event?.status = "attending"
+                                    self.event?.attendeeIds.append(self.userId!)
+                                    
+                                    CurrentUser.currentUser?.userEvents?[index] = self.event!
+                                    
+                                    self.showAttendees()
+                                    self.swapButtonSet(buttonSetView: self.stdButtonView)
+                            
+                                    print("Document successfully updated")
+                                }
+                            }
+                        }
+                    }
+                }
+                
+            } else {
+                print("Invite document does not exist")
+                // Update event status or remove event entirely.
+                if self.isFav {
+                    self.notGoingToFavoritedEvent(disableButtonView: self.pendingButtonView)
+                } else {
+                    self.deleteFirebaseEvent()
+                }
+                
+                // Create alert.
+                let alert = UIAlertController(title: "Deleted Group", message: "The group organizer has deleted this group. This invitation will be removed.", preferredStyle: .alert)
+                // Add action to alert controller.
+                alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                // Show alert.
+                self.present(alert, animated: true, completion: nil)
+            }
+        }
+    }
+    
+    @IBAction func declineBtnTapped(_ sender: UIButton) {
+        pendingBtnDisableView.isHidden = false
+        
+        if self.isFav {
+            notGoingToFavoritedEvent(disableButtonView: pendingButtonView)
+        } else {
+            self.deleteFirebaseEvent()
         }
     }
     
@@ -266,12 +373,14 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
             eventTickets = event!.tickets
             eventDescription = event!.description
             eventGroupId = event!.groupId
+            eventOrganizerId = event!.organizerId
+            eventStatus = event!.status
             isFav = event!.isFavorite
             isCreated = event!.isCreated
             
             // Populate fields.
             imageIV.image = event?.image
-            titleLbl.text = eventTitle
+            titleView.statusLbl.text = eventTitle
             dateLbl.text = eventDate
             priceLbl.text = "No ticket info provided"
             locationLbl.text = eventAddress
@@ -314,13 +423,18 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
         // Display attendees.
         if !eventAttendeeIds.isEmpty {
             attendeeIVs = [attendeeIV0, attendeeIV1, attendeeIV2, attendeeIV3, attendeeIV4, attendeeIV5, attendeeIV6, attendeeIV7]
+            
+            groupLbl.text = "Group • \(eventAttendeeIds.count)"
             groupLbl.isHidden = false
             
-            if eventGroupId == userId {
+            if eventOrganizerId == userId {
                 inviteBtn.isHidden = false
             }
             
             if eventAttendeeIds.count > 8 {
+                let diff = eventAttendeeIds.count - 8
+                
+                additonalAttendeesLbl.text = diff > 1 ? "+ \(diff) others" : "+ 1 other"
                 additonalAttendeesLbl.isHidden = false
             }
             
@@ -340,8 +454,10 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
                             break
                             
                         case .failure(let error):
-                            print("friend: \(self.eventAttendeeIds[i])")
-                            print("Error getting attendee image: \(error)")
+                            if !error.isTaskCancelled && !error.isNotCurrentTask {
+                                print("friend: \(self.eventAttendeeIds[i])")
+                                print("Error getting attendee image: \(error)")
+                            }
                             break
                         }
                     })
@@ -362,8 +478,8 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
                 print("error in geocodeAddressString")
             }
             
-            if !placemarks!.isEmpty {
-                let placemark = placemarks?.first
+            if let placemarks = placemarks, !placemarks.isEmpty {
+                let placemark = placemarks.first
                 let lat = placemark?.location!.coordinate.latitude
                 let lon = placemark?.location!.coordinate.longitude
                 let location = CLLocation(latitude: lat!, longitude: lon!)
@@ -378,42 +494,145 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
         }
     }
     
+    private func saveEventToFirebase(eventId: String) {
+        self.eventDataDelegate.addUserEvent(uId: self.userId!, eventId: eventId, groupId: self.userId!, isCreated: false) { result in
+            if result == true {
+                // Create new group in Firebase and update user's event.
+                self.eventDataDelegate.addFirebaseGroup(eventId: eventId) { newId in
+                    if newId != "error" {
+                        // Update displayed event.
+                        self.event?.id = eventId
+                        self.event?.status = "attending"
+                        self.event?.groupId = newId
+                        self.event?.organizerId = self.userId!
+                        self.event?.attendeeIds = [self.userId!]
+                        
+                        self.eventId = eventId
+                        self.eventGroupId = newId
+                        self.eventOrganizerId = self.userId!
+                        
+                        CurrentUser.currentUser?.userEvents?.append(self.event!)
+                        
+                        self.updateVisibleButtons(going: true)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func notGoingToFavoritedEvent(disableButtonView: UIView) {
+        // Find document in Firebase and update status field.
+        self.docRef!.collection("events").document(self.eventId).updateData(["status": "", "groupId": ""]) { err in
+            if let err = err {
+                print("Error updating document: \(err)")
+                disableButtonView.isHidden = true
+                return
+            } else {
+                // Update event properties and update current user's events to match.
+                if let index = CurrentUser.currentUser?.userEvents?.firstIndex(where: { $0.id == self.eventId }) {
+                    // Update displayed event.
+                    self.event?.status = ""
+                    self.event?.groupId = ""
+                    self.event?.organizerId = ""
+                    self.event?.attendeeIds = [String]()
+                    
+                    CurrentUser.currentUser?.userEvents?[index] = self.event!
+                    
+                    if self.eventStatus == "invited" {
+                        self.eventStatus = self.event?.status ?? ""
+                        self.swapButtonSet(buttonSetView: self.stdButtonView)
+                    }
+                    
+                    self.updateVisibleButtons(going: false)
+                    self.updateCV?()
+
+                    if self.eventAttendeeIds.count > 1 {
+                        // Remove current user's user id from group attendeeIds array in Firebase.
+                        self.db.collection("groups").document(self.eventGroupId).updateData(["memberIds": FieldValue.arrayRemove([self.userId!])]) { error in
+                            if let error = error {
+                                print("Error updating group: \(error)")
+                            } else {
+                                print("Group successfully updated")
+                            }
+                        }
+                    }
+                    
+                    print("Document successfully updated")
+                }
+            }
+        }
+    }
+    
     private func deleteFirebaseEvent() {
-        // Remove event from user's events in Firebase
-        if self.docRef != nil {
-            self.docRef!.collection("events").document(self.eventId).delete() { err in
-                if let err = err {
-                    print("Error removing document: \(err)")
+        self.eventDataDelegate.deleteFirebaseEvent(event: self.event!) { result in
+            if result == false {
+                print("There was an issue deleting this event.")
+            } else {
+                if self.isCreated {
+                    self.dismiss(animated: true, completion: nil)
                 } else {
-                    // Remove event from userEvents array.
-                    self.allUserEvents.removeAll(where: { $0.id == self.eventId })
-                    CurrentUser.currentUser?.userEvents = self.allUserEvents
+                    // Update displayed event.
+                    self.event?.id = ""
+                    self.event?.status = ""
+                    self.event?.groupId = ""
+                    self.event?.organizerId = ""
+                    self.event?.attendeeIds = [String]()
                     
-                    if self.isCreated {
-                        self.dismiss(animated: true, completion: nil)
-                    } else {
-                        // Update visible buttons.
-                        self.addButton.isHidden = false
-                        self.notGoingButton.isHidden = true
-                        self.memoriesButton.isHidden = true
+                    if self.eventStatus == "invited" {
+                        self.eventStatus = self.event?.status ?? ""
+                        self.swapButtonSet(buttonSetView: self.stdButtonView)
                     }
                     
-                    print("Document successfully removed!")
+                    self.updateVisibleButtons(going: false)
                 }
             }
+        }
+    }
+    
+    private func updateVisibleButtons(going: Bool) {
+        if going {
+            // Update visible buttons.
+            addButton.isHidden = true
+            notGoingButton.isHidden = false
+            memoriesButton.isHidden = false
             
-            if isCreated {
-                // Delete event image from Firebase Storage.
-                let storageRef = Storage.storage().reference().child("users").child(userId!).child("events").child(eventId).child("thumbnail.png")
-                
-                storageRef.delete { err in
-                    if let err = err {
-                        print("Error deleting image: \(err)")
-                    } else {
-                        print("Image successfully deleted")
-                    }
+            // Show attendee information.
+            showAttendees()
+        } else {
+            // Update visible buttons.
+            addButton.isHidden = false
+            notGoingButton.isHidden = true
+            memoriesButton.isHidden = true
+            
+            // Hide attendee information.
+            groupLbl.isHidden = true
+            inviteBtn.isHidden = true
+            additonalAttendeesLbl.isHidden = true
+            
+            for iv in attendeeIVs {
+                if !iv.isHidden {
+                    iv.isHidden = true
                 }
             }
+        }
+        
+        stdBtnDisableView.isHidden = true
+    }
+    
+    private func swapButtonSet(buttonSetView: UIView) {
+        view.addSubview(buttonSetView)
+        
+        NSLayoutConstraint.activate([
+            buttonSetView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            buttonSetView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            buttonSetView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+        
+        if buttonSetView == stdButtonView {
+            updateVisibleButtons(going: true)
+            pendingButtonView.removeFromSuperview()
+            pendingBtnDisableView.isHidden = true
+            updateCV?()
         }
     }
     
@@ -448,6 +667,11 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
             destination.eventTitle = self.eventTitle
             destination.eventGroupId = self.eventGroupId
             destination.eventAttendeeIds = self.eventAttendeeIds
+        }
+        
+        if let destination = segue.destination as? InviteFriendsViewController {
+            // Send selected event and userEvents array to DetailsViewController.
+            destination.event = self.event
         }
     }
 }

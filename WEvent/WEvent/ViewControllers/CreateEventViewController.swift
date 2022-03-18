@@ -11,6 +11,7 @@ import Firebase
 
 class CreateEventViewController: UIViewController, UIImagePickerControllerDelegate, UITableViewDelegate, UITableViewDataSource, UITextViewDelegate, UINavigationControllerDelegate {
 
+    @IBOutlet weak var trashButton: UIBarButtonItem!
     @IBOutlet weak var eventPicIV: UIImageView!
     @IBOutlet weak var eventTitleTF: CustomTextField!
     @IBOutlet weak var eventDateTF: CustomTextField!
@@ -26,7 +27,7 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
     @IBOutlet weak var createButton: UIButton!
     
     let db = Firestore.firestore()
-    let docId = Auth.auth().currentUser?.uid
+    let userId = Auth.auth().currentUser?.uid
     var docRef: DocumentReference?
     
     private var searchCompleter: MKLocalSearchCompleter?
@@ -48,14 +49,17 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
     
     var updateCV: (() -> Void)?
     
+    var eventDataDelegate: EventDataDelegate!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        docRef = db.collection("users").document(docId!)
+        docRef = db.collection("users").document(userId!)
         allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
+        eventDataDelegate = FirebaseHelper()
         
         // Set default image.
-        image = UIImage(named: "logo_stamp")!
+        image = UIImage(named: "logo_placeholder")!
         
         // Set up gesture recognizers.
         imgTapRecognizer = UITapGestureRecognizer(target: self, action: #selector(setPicture(_:)))
@@ -81,11 +85,33 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
             editEvent = true
             eventId = event!.id
             populateFields()
+        } else {
+            trashButton.isEnabled = false
+            trashButton.tintColor = .clear
         }
     }
     
     @IBAction func cancelBtnTapped(_ sender: UIBarButtonItem) {
         self.dismiss(animated: true, completion: nil)
+    }
+    
+    @IBAction func trashBtnTapped(_ sender: UIBarButtonItem) {
+        // Create alert to be displayed if proper conditions are not met.
+        let alert = UIAlertController(title: "Delete Event?", message: "Are you sure that you want to delete this event? Doing so will delete this event along with all associated media and this action cannot be undone.", preferredStyle: .alert)
+        // Add actions to alert controller.
+        alert.addAction(UIAlertAction(title: "Keep", style: .cancel, handler: nil))
+        alert.addAction(UIAlertAction(title: "Delete", style: .destructive, handler: { action in
+            self.eventDataDelegate.deleteFirebaseEvent(event: self.event!) { result in
+                if result == false {
+                    print("There was an issue deleting this event.")
+                } else {
+                    self.dismiss(animated: true, completion: nil)
+                }
+            }
+        }))
+        
+        // Show alert.
+        self.present(alert, animated: true, completion: nil)
     }
     
     @objc func pickDate(_ sender: UIView) {
@@ -101,7 +127,9 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         
-        let dateString = formatter.string(from: datePicker.date)
+        var dateString = formatter.string(from: datePicker.date)
+        dateString = dateString.replacingOccurrences(of: ",", with: "")
+        dateString = dateString.replacingOccurrences(of: "at", with: "|")
         
         eventDateTF.text = dateString
         datePickerView.isHidden = true
@@ -142,7 +170,7 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
             
             return
         }
-        
+                
         if editEvent {
             // Ensure data has been changed.
             let price = event?.tickets[0]["source"] as? String
@@ -171,16 +199,27 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
         
         var eventTickets = [[String: Any]]()
         eventTickets.append(["source" : eventPrice])
+                
+        let data: [String: Any] = ["thumbnail": event?.imageUrl ?? "", "title": eventTitle, "date": eventDate, "tickets": eventTickets, "address": eventLocation, "link": "", "description": eventDescription]
         
-        // Add event to user's events in Firebase.
-        let data: [String: Any] = ["thumbnail": event?.imageUrl ?? "", "title": eventTitle, "date": eventDate, "tickets": eventTickets, "address": eventLocation, "link": "", "description": eventDescription, "groupId": docId!, "attendeeIds": [docId!], "status": "attending", "isCreated": true, "isFavorite": event?.isFavorite ?? false]
+        // Create new event and make it the current event.
+        self.event = Event(id: self.event?.id ?? "", title: eventTitle, date: eventDate, address: eventLocation, link: "", description: eventDescription, tickets: eventTickets, imageUrl: self.event?.imageUrl ?? "", image: self.image, groupId: "", organizerId: self.userId!, attendeeIds: [self.userId!], status: "attending", isFavorite: self.event?.isFavorite ?? false, isCreated: self.event?.isCreated ?? true)
         
-        event = Event(id: event?.id ?? "", title: eventTitle, date: eventDate, address: eventLocation, link: "", description: eventDescription, tickets: eventTickets, imageUrl: event?.imageUrl ?? "", image: self.image, groupId: docId!, attendeeIds: [docId!], status: "attending", isFavorite: event?.isFavorite ?? false, isCreated: event?.isCreated ?? false)
-        
-        if !editEvent {
-            saveEventToFirebase(data: data)
+        if !self.editEvent {
+            // Add event to Firebase "events" collection.
+            var ref: DocumentReference?
+            
+            ref = db.collection("events").addDocument(data: data) { (error) in
+                if let error = error {
+                    print("Error: \(error.localizedDescription)")
+                } else {
+                    if let docId = ref?.documentID {
+                        self.saveEventToFirebase(eventId: docId)
+                    }
+                }
+            }
         } else {
-            updateFirebaseEvent(data: data)
+            self.updateFirebaseEvent(data: data)
         }
     }
 
@@ -314,27 +353,24 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
         createButton.setTitle("Save Changes", for: .normal)
     }
     
-    private func saveEventToFirebase(data: [String: Any]) {
-        var ref: DocumentReference?
-        
-        ref = docRef?.collection("events").addDocument(data: data) { (error) in
-            if let error = error {
-                print("Error: \(error.localizedDescription)")
-                
-                // Create alert to show user.
-            } else {
-                if let eId = ref?.documentID {
-                    self.event?.id = eId
-                    self.eventId = eId
-                    
-                    // Create new event and add to curren user's events.
-                    self.allUserEvents.append(self.event!)
-                    CurrentUser.currentUser?.userEvents = self.allUserEvents
-                                                        
-                    print("Document added with ID: \(eId)")
-                    
-                    self.showSuccessAlert()
-                    self.saveImageToFirebase()
+    private func saveEventToFirebase(eventId: String) {
+        self.eventDataDelegate.addUserEvent(uId: self.userId!, eventId: eventId, groupId: self.userId!, isCreated: true) { result in
+            if result == true {
+                // Create new group in Firebase and update user's event.
+                self.eventDataDelegate.addFirebaseGroup(eventId: eventId) { newId in
+                    if newId != "error" {
+                        // Update displayed event.
+                        self.event?.id = eventId
+                        self.event?.groupId = newId
+                        
+                        self.eventId = eventId
+                        
+                        self.allUserEvents.append(self.event!)
+                        CurrentUser.currentUser?.userEvents = self.allUserEvents
+                        
+                        self.showSuccessAlert()
+                        self.saveImageToFirebase()
+                    }
                 }
             }
         }
@@ -342,25 +378,26 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
     
     private func updateFirebaseEvent(data: [String: Any]) {
         // Find document in Firebase and update favorite field.
-        docRef!.collection("events").document(eventId).updateData(data) { err in
+        db.collection("events").document(eventId).updateData(data) { err in
             if let err = err {
                 print("Error updating document: \(err)")
             } else {
                 // Update current user's events.
                 if let index = self.allUserEvents.firstIndex(where: { $0.id == self.eventId }) {
-                    self.event?.image = self.eventPicIV.image!
+                    if self.imageChanged {
+                        self.event?.image = self.eventPicIV.image!
+                        self.event?.imageUrl = ""
+                        self.saveImageToFirebase()
+                    }
+                    
                     self.allUserEvents[index] = self.event!
+                    
                     CurrentUser.currentUser?.userEvents = self.allUserEvents
                     
                     print("Document successfully updated")
                     
                     self.updateCV?()
-                    
                     self.showSuccessAlert()
-    
-                    if self.imageChanged {
-                        self.saveImageToFirebase()
-                    }
                 }
             }
         }
@@ -382,13 +419,14 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
                 storageRef.downloadURL { url, error in
                     if let url = url {
                         // Update created event in Firebase with url string.
-                        self.docRef?.collection("events").document(self.eventId).updateData(["thumbnail": url.absoluteString]) { err in
+                        self.db.collection("events").document(self.eventId).updateData(["thumbnail": url.absoluteString]) { err in
                             if let err = err {
                                 print("Error adding image: \(err)")
                             } else {
                                 // Update event in user's current events.
                                 CurrentUser.currentUser?.userEvents?.first(where: { $0.id == self.eventId })?.image = self.image
-
+                                CurrentUser.currentUser?.userEvents?.first(where: { $0.id == self.eventId })?.imageUrl = url.absoluteString
+                                
                                 print("Image successfully added")
                             }
                         }

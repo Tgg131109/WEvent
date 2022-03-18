@@ -32,17 +32,16 @@ class EventsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     override func viewWillAppear(_ animated: Bool) {
         let allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
         
-        userUpcomingEvents = allUserEvents.filter({$0.status != ""})
-        userPastEvents = allUserEvents.filter({$0.isFavorite == true})
-        userSavedEvents = allUserEvents.filter({$0.isFavorite == true})
-        userInvitedEvents = allUserEvents.filter({$0.status == "invited"})
+        userUpcomingEvents = allUserEvents.filter({ $0.status == "attending" && $0.isPast == false })
+        userPastEvents = allUserEvents.filter({ $0.isPast == true && $0.status == "attending" }).reversed()
+        userSavedEvents = allUserEvents.filter({ $0.isFavorite == true })
+        userInvitedEvents = allUserEvents.filter({ $0.status == "invited" })
         
         eventTypeArray = [userUpcomingEvents, userPastEvents, userSavedEvents, userInvitedEvents]
         
+        msgLbl.isHidden = !eventTypeArray[segCon.selectedSegmentIndex].isEmpty
+        
         tableView.reloadData()
-//        if updateLV {
-//            self.tableView.reloadData()
-//        }
         
         if editEvent {
             editEvent = false
@@ -53,9 +52,9 @@ class EventsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     }
     
     @IBAction func segConChanged(_ sender: UISegmentedControl) {
-        tableView.reloadData()
-        
         msgLbl.isHidden = !eventTypeArray[segCon.selectedSegmentIndex].isEmpty
+        
+        self.tableView.reloadSections(IndexSet([0]), with: .fade)
     }
     
     // MARK: - UITableViewDataSource
@@ -73,7 +72,7 @@ class EventsViewController: UIViewController, UITableViewDelegate, UITableViewDa
         
         if segCon.selectedSegmentIndex != 0 {
             cell.eventImageIV.kf.indicatorType = .activity
-            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: UIImage(named: "logo_placeholder"), options: [.transition(.fade(1))], completionHandler: { result in
                 switch result {
                 case .success(let value):
                     dataToShow[indexPath.row].image = value.image
@@ -97,7 +96,9 @@ class EventsViewController: UIViewController, UITableViewDelegate, UITableViewDa
                     break
                     
                 case .failure(let error):
-                    print("Error getting image: \(error)")
+                    if !error.isTaskCancelled && !error.isNotCurrentTask {
+                        print("Error getting image: \(error)")
+                    }
                     break
                 }
             })
