@@ -135,6 +135,7 @@ class FirebaseHelper: UserDataDelegate, EventDataDelegate {
                 
                 var organizerId = ""
                 var attendeeIds = [String]()
+                var pendingIds = [String]()
                 
                 if !groupId.isEmpty {
                 // Get group from Firebase "groups" collection.
@@ -142,18 +143,20 @@ class FirebaseHelper: UserDataDelegate, EventDataDelegate {
                     
                     guard let groupData = doc.data(),
                           let orgId = groupData["organizerId"] as? String,
-                          let memberIds = groupData["memberIds"] as? [String]
+                          let memberIds = groupData["memberIds"] as? [String],
+                          let invitedIds = groupData["pendingIds"] as? [String]
                     else {
-                        print("There was an error setting event data")
+                        print("There was an error setting event group data")
                         continue
                     }
                     
                     organizerId = orgId
                     attendeeIds = memberIds
+                    pendingIds = invitedIds
                 }
                 
                 // Create Event object and add to events array.
-                events.append(Event(id: id, title: title, date: date, address: address, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: UIImage(named: "logo_placeholder")!, groupId: groupId, organizerId: organizerId, attendeeIds: attendeeIds, status: status, isFavorite: favorite, isCreated: created))
+                events.append(Event(id: id, title: title, date: date, address: address, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: UIImage(named: "logo_placeholder")!, groupId: groupId, organizerId: organizerId, attendeeIds: attendeeIds, pendingIds: pendingIds, status: status, isFavorite: favorite, isCreated: created))
             }
             
             let img = UIImage(named: "logo_placeholder")!
@@ -269,7 +272,7 @@ class FirebaseHelper: UserDataDelegate, EventDataDelegate {
     func addFirebaseGroup(eventId: String, completion: @escaping (String) -> ()) {
         // Create new group in Firbase.
         var ref: DocumentReference? = nil
-        let data: [String: Any] = ["eventId": eventId, "organizerId": self.userId!, "memberIds": [self.userId!]]
+        let data: [String: Any] = ["eventId": eventId, "organizerId": self.userId!, "memberIds": [self.userId!], "pendingIds": [String]()]
         
         ref = db.collection("groups").addDocument(data: data) { (error) in
             if let error = error {

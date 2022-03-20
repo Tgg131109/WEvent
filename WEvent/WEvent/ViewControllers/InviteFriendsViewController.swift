@@ -7,6 +7,7 @@
 
 import UIKit
 import Firebase
+import Kingfisher
 
 class InviteFriendsViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
 
@@ -22,6 +23,8 @@ class InviteFriendsViewController: UIViewController, UITableViewDelegate, UITabl
     
     var eventDataDelegate: EventDataDelegate!
     
+    var updateEvent: (() -> Void)?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -30,7 +33,7 @@ class InviteFriendsViewController: UIViewController, UITableViewDelegate, UITabl
 
         if let eId = event?.id {
             for friend in friends {
-                // Check if any friends already have plans to attend this event an exclude them from list if so.
+                // Check if any friends already have plans to attend or have been invited to this event an exclude them from list if so.
                 db.collection("users").document(friend.id).collection("events").document(eId).getDocument { (eDoc, error) in
                     if let eDoc = eDoc, eDoc.exists {
                         guard let eventData = eDoc.data(),
@@ -41,7 +44,7 @@ class InviteFriendsViewController: UIViewController, UITableViewDelegate, UITabl
                         }
                         
                         if !groupId.isEmpty {
-                            print("Friend is already attending this event.")
+                            print("Friend is already attending or invited to this event.")
                             self.friends.removeAll(where: { $0.id == friend.id})
                             self.tableView.reloadData()
                         }
@@ -66,10 +69,16 @@ class InviteFriendsViewController: UIViewController, UITableViewDelegate, UITabl
     }
     
     private func saveInvitesToFirebase() {
-        if let eId = event?.id, let gId = event?.groupId {
+        if let eId = event?.id, let gId = event?.groupId, let index = CurrentUser.currentUser?.userEvents?.firstIndex(where: { $0.id == eId }) {
             for friend in invitedFriends {
+                // Update event properties and update current user's events to match.
+                self.event?.pendingIds.append(friend.id)
+                
+                CurrentUser.currentUser?.userEvents?[index] = self.event!
+                updateEvent?()
+                
                 let ref = db.collection("users").document(friend.id).collection("events").document(eId)
-                // Check if any friends already have plans to attend this event an exclude them from list if so.
+                // Check if any friends already have this event saved and update document if so.
                 ref.getDocument { (eDoc, error) in
                     if let eDoc = eDoc, eDoc.exists {
                         eDoc.reference.updateData(["groupId": gId, "status": "invited"]) { err in
@@ -89,6 +98,15 @@ class InviteFriendsViewController: UIViewController, UITableViewDelegate, UITabl
                             } else {
                                 print("User favorite event added with ID: \(eId)")
                             }
+                        }
+                    }
+                    
+                    // Add friend id to group's pending id's array.
+                    self.db.collection("groups").document(gId).updateData(["pendingIds": FieldValue.arrayUnion([friend.id])]) { error in
+                        if let error = error {
+                            print("Error updating document: \(error)")
+                        } else {
+                            print("Group pendingIds successfully updated")
                         }
                     }
                 }
@@ -150,15 +168,4 @@ class InviteFriendsViewController: UIViewController, UITableViewDelegate, UITabl
         // Deselect row for animation purposes.
         tableView.deselectRow(at: indexPath, animated: true)
     }
-    
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destination.
-        // Pass the selected object to the new view controller.
-    }
-    */
-
 }

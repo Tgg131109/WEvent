@@ -103,6 +103,8 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
                         imagePicker.delegate = self
                         imagePicker.sourceType = .camera
                         
+                        self.getPhotos = false
+                        
                         self.present(imagePicker, animated: true)
                     }
                 }
@@ -139,7 +141,9 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
         picker.dismiss(animated: true, completion: nil)
         
         if let image = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
-            self.saveImageToFirebase(image: image, imgCount: 1)
+            DispatchQueue.main.async {
+                self.saveImageToFirebase(image: image, imgCount: 1)
+            }
         }
     }
     
@@ -206,7 +210,14 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
         
         self.images.append(scaledImg)
         self.imageCredits.append(["You": scaledImg])
-        self.mediaCV.reloadSections(IndexSet([0]))
+        
+        if let i = self.eventAttendeeIds?.firstIndex(where: { $0 == userId }) {
+            self.imageAssocs.append(i)
+        }
+        
+        DispatchQueue.main.async {
+            self.mediaCV.reloadData()
+        }
         
         self.msgLbl.isHidden = !self.images.isEmpty
       
@@ -322,6 +333,7 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
         if let destination = segue.destination as? ImageScrollViewController {
             // Send selected event and userEvents array to DetailsViewController.
             destination.images = self.images
+            destination.imageUrls = self.imageUrls
             destination.imageCredits = self.imageCredits
             destination.imageIndex = self.selectedIP
             

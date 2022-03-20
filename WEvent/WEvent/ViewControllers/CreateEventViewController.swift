@@ -54,6 +54,8 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        self.hideKeyboardWhenTappedAround()
+        
         docRef = db.collection("users").document(userId!)
         allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
         eventDataDelegate = FirebaseHelper()
@@ -203,7 +205,7 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
         let data: [String: Any] = ["thumbnail": event?.imageUrl ?? "", "title": eventTitle, "date": eventDate, "tickets": eventTickets, "address": eventLocation, "link": "", "description": eventDescription]
         
         // Create new event and make it the current event.
-        self.event = Event(id: self.event?.id ?? "", title: eventTitle, date: eventDate, address: eventLocation, link: "", description: eventDescription, tickets: eventTickets, imageUrl: self.event?.imageUrl ?? "", image: self.image, groupId: "", organizerId: self.userId!, attendeeIds: [self.userId!], status: "attending", isFavorite: self.event?.isFavorite ?? false, isCreated: self.event?.isCreated ?? true)
+        self.event = Event(id: self.event?.id ?? "", title: eventTitle, date: eventDate, address: eventLocation, link: "", description: eventDescription, tickets: eventTickets, imageUrl: self.event?.imageUrl ?? "", image: self.image, groupId: "", organizerId: self.userId!, attendeeIds: [self.userId!], pendingIds: [String](), status: "attending", isFavorite: self.event?.isFavorite ?? false, isCreated: self.event?.isCreated ?? true)
         
         if !self.editEvent {
             // Add event to Firebase "events" collection.

@@ -21,6 +21,7 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
     var isSearching = false
     var suggestedSearches = ["music festival", "family friendly events", "car show"]
     var recentSearches = [String]()
+    var nonSearchBarInputStr = ""
     var searchResults = [Event]()
     var selectedEvent: Event?
     
@@ -51,7 +52,15 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         recentSearches = UserDefaults.standard.stringArray(forKey: "\(userId!)recentSearches") ?? [String]()
         
         allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
-        location = CurrentLocation.location!.searchStr
+        
+        if CurrentLocation.location != nil {
+            location = CurrentLocation.location!.searchStr
+        } else {
+            print("unable to get location at this time")
+            searchController.searchBar.isHidden = true
+            self.tableView.isHidden = true
+        }
+
         resultCountLbl.text = recentSearches.isEmpty ? "Suggested Searches" : "Recent Searches"
     }
     
@@ -61,6 +70,7 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         // Update user defaults.
         UserDefaults.standard.set(recentSearches, forKey: "\(userId!)recentSearches")
     }
+    
     func updateSearchResults(for searchController: UISearchController) {
         let searchBar = searchController.searchBar
         
@@ -74,24 +84,31 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         isSearching = true
         
-        if !searchBar.text!.isEmpty {
+        var inputStr = searchBar.text ?? ""
+        
+        if inputStr.isEmpty {
+            inputStr = nonSearchBarInputStr
+        }
+        
+        if !inputStr.isEmpty {
             self.navigationItem.searchController?.searchBar.isHidden = true
             activityView.activityIndicator.startAnimating()
             activityView.isHidden = false
-            
+
             // Run query
-            let formattedSearch = searchBar.text?.replacingOccurrences(of: " ", with: "+")
-            let searchStr = ("\(formattedSearch!)+in+\(location)")
+            let formattedSearch = inputStr.replacingOccurrences(of: " ", with: "+")
+            let searchStr = ("\(formattedSearch)+in+\(location)")
             print(searchStr)
             
             findEvents(searchStr: searchStr)
+            nonSearchBarInputStr = ""
             
             // Limit recent searches to 20 items.
             if recentSearches.count > 19 {
                 recentSearches.removeLast()
             }
             
-            recentSearches.insert(searchBar.text!, at: 0)
+            recentSearches.insert(inputStr, at: 0)
         }
     }
     
@@ -165,7 +182,7 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
                             let addressStr = "\(address[0]), \(address[1])"
                             let eventImage = UIImage(named: "logo_placeholder")!
                             
-                            self.searchResults.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage, groupId: "", organizerId: "", attendeeIds: [String]()))
+                            self.searchResults.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage, groupId: "", organizerId: "", attendeeIds: [String](), pendingIds: [String]()))
                         }
                     }
                 }
@@ -203,35 +220,39 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         let cell = tableView.dequeueReusableCell(withIdentifier: isSearching ? "table_cell_4" : "table_cell_3", for: indexPath)
         
         if isSearching {
-            let cell = cell as! CustomTableViewCell
-            let event = searchResults[indexPath.row]
-            
-            cell.eventImageIV.layer.cornerRadius = 10
-            cell.eventImageIV.kf.indicatorType = .activity
-            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: UIImage(named: "logo_placeholder"), options: [.transition(.fade(1))], completionHandler: { result in
-                switch result {
-                case .success(let value):
-                    event.image = value.image
-                    self.searchResults[indexPath.row].image = value.image
-                    break
-                    
-                case .failure(let error):
-                    if !error.isTaskCancelled && !error.isNotCurrentTask {
-                        print("Error getting image: \(error)")
+            if searchResults.count > indexPath.row {
+                let cell = cell as! CustomTableViewCell
+                let event = searchResults[indexPath.row]
+                
+                cell.eventImageIV.layer.cornerRadius = 10
+                cell.eventImageIV.kf.indicatorType = .activity
+                cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: UIImage(named: "logo_placeholder"), options: [.transition(.fade(1))], completionHandler: { result in
+                    switch result {
+                    case .success(let value):
+                        event.image = value.image
+                        self.searchResults[indexPath.row].image = value.image
+                        break
+                        
+                    case .failure(let error):
+                        if !error.isTaskCancelled && !error.isNotCurrentTask {
+                            print("Error getting image: \(error)")
+                        }
+                        break
                     }
-                    break
+                })
+                cell.eventDateLbl.text = event.date
+                cell.eventTitleLbl.text = event.title
+                cell.eventAddressLbl.text = event.address
+                cell.favButton.isSelected = allUserEvents.filter({$0.isFavorite == true}).contains(where: {$0.title == event.title})
+                cell.favButton.tintColor = cell.favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
+                
+                cell.favTapped = {(favButton) in
+                    self.favoritesDelegate.setFavorite(event: event, isFav: !favButton.isSelected)
+                    favButton.isSelected.toggle()
+                    favButton.tintColor = favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
                 }
-            })
-            cell.eventDateLbl.text = event.date
-            cell.eventTitleLbl.text = event.title
-            cell.eventAddressLbl.text = event.address
-            cell.favButton.isSelected = allUserEvents.filter({$0.isFavorite == true}).contains(where: {$0.title == event.title})
-            cell.favButton.tintColor = cell.favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
-            
-            cell.favTapped = {(favButton) in
-                self.favoritesDelegate.setFavorite(event: event, isFav: !favButton.isSelected)
-                favButton.isSelected.toggle()
-                favButton.tintColor = favButton.isSelected ? UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1) : .systemGray
+            } else {
+                print("wait")
             }
         } else {
             cell.textLabel?.text = recentSearches.isEmpty ? suggestedSearches[indexPath.row] : recentSearches[indexPath.row]
@@ -255,8 +276,13 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         } else {
             let cell = tableView.cellForRow(at: indexPath)
 
-            navigationItem.searchController!.isActive = true
-            navigationItem.searchController!.searchBar.text = cell?.textLabel?.text
+            if let cellStr = cell?.textLabel?.text {
+                navigationItem.searchController!.isActive = true
+                navigationItem.searchController!.searchBar.text = cellStr
+                
+                nonSearchBarInputStr = cellStr
+                self.searchBarSearchButtonClicked(searchController.searchBar)
+            }
         }
     }
     

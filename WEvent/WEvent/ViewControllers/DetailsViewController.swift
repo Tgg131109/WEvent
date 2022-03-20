@@ -61,6 +61,7 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
     var eventGroupId = ""
     var eventOrganizerId = ""
     var eventAttendeeIds = [String]()
+    var eventPendingIds = [String]()
     var attendeeIVs = [UIImageView]()
     var eventStatus = ""
     var isFav = Bool()
@@ -73,6 +74,8 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
     var eventDataDelegate: EventDataDelegate!
     
     var updateCV: (() -> Void)?
+    
+    var updateGroup = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -97,6 +100,16 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
         super.viewWillAppear(animated)
         
         self.navigationController?.isNavigationBarHidden = true
+        
+        if updateGroup {
+            updateGroup = false
+            if let i = CurrentUser.currentUser?.userEvents?.firstIndex(where: { $0.id == eventId }) {
+                event?.attendeeIds = CurrentUser.currentUser?.userEvents?[i].attendeeIds ?? eventAttendeeIds
+                event?.pendingIds = CurrentUser.currentUser?.userEvents?[i].pendingIds ?? eventPendingIds
+                
+                showAttendees()
+            }
+        }
         
         let buttonViewToShow = event?.status == "invited" ? pendingButtonView : stdButtonView
         
@@ -315,24 +328,32 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
                                 print("Error updating document: \(error)")
                                 self.pendingBtnDisableView.isHidden = true
                             } else {
-                                // Update event properties and update current user's events to match.
-                                if let index = CurrentUser.currentUser?.userEvents?.firstIndex(where: { $0.id == self.eventId }) {
-                                    // Update displayed event.
-                                    self.event?.status = "attending"
-                                    self.event?.attendeeIds.append(self.userId!)
+                                // Remove current user's user id from group pendingIds array in Firebase.
+                                self.db.collection("groups").document(self.eventGroupId).updateData(["pendingIds": FieldValue.arrayRemove([self.userId!])]) { error in
+                                    if let error = error {
+                                        print("Error updating document: \(error)")
+                                        self.pendingBtnDisableView.isHidden = true
+                                    } else {
+                                        // Update event properties and update current user's events to match.
+                                        if let index = CurrentUser.currentUser?.userEvents?.firstIndex(where: { $0.id == self.eventId }) {
+                                            // Update displayed event.
+                                            self.event?.status = "attending"
+//                                            self.event?.attendeeIds.append(self.userId!)
+//                                            self.event?.pendingIds.removeAll(where: { $0 == self.userId! })
+                                            
+                                            CurrentUser.currentUser?.userEvents?[index].status = "attending"
+//                                            CurrentUser.currentUser?.userEvents?[index].pendingIds.removeAll(where: { $0 == self.userId! })
+                                            
+                                            self.swapButtonSet(buttonSetView: self.stdButtonView)
                                     
-                                    CurrentUser.currentUser?.userEvents?[index] = self.event!
-                                    
-                                    self.showAttendees()
-                                    self.swapButtonSet(buttonSetView: self.stdButtonView)
-                            
-                                    print("Document successfully updated")
+                                            print("Document successfully updated")
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                
             } else {
                 print("Invite document does not exist")
                 // Update event status or remove event entirely.
@@ -418,8 +439,13 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
     }
     
     private func showAttendees() {
-        eventAttendeeIds = event!.attendeeIds
-        
+        if let i = CurrentUser.currentUser?.userEvents?.firstIndex(where: { $0.id == eventId }) {
+            eventAttendeeIds = CurrentUser.currentUser?.userEvents?[i].attendeeIds ?? event!.attendeeIds
+            eventPendingIds = CurrentUser.currentUser?.userEvents?[i].pendingIds ?? event!.pendingIds
+        } else {
+            return
+        }
+
         // Display attendees.
         if !eventAttendeeIds.isEmpty {
             attendeeIVs = [attendeeIV0, attendeeIV1, attendeeIV2, attendeeIV3, attendeeIV4, attendeeIV5, attendeeIV6, attendeeIV7]
@@ -431,31 +457,51 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
                 inviteBtn.isHidden = false
             }
             
-            if eventAttendeeIds.count > 8 {
-                let diff = eventAttendeeIds.count - 8
+            var totalMembers = 0
+            
+            if !eventPendingIds.isEmpty {
+                totalMembers = eventAttendeeIds.count + eventPendingIds.count
+            } else {
+                totalMembers = eventAttendeeIds.count
+            }
+            
+            if totalMembers > 8 {
+                let diff = totalMembers - 8
                 
                 additonalAttendeesLbl.text = diff > 1 ? "+ \(diff) others" : "+ 1 other"
                 additonalAttendeesLbl.isHidden = false
             }
             
-            for i in 0...eventAttendeeIds.count - 1 {
+            var memberIds = eventAttendeeIds
+            
+            if totalMembers > eventAttendeeIds.count {
+                memberIds.append(contentsOf: eventPendingIds)
+            }
+            
+            for i in totalMembers > 8 ? 0...7 : 0...totalMembers - 1 {
                 attendeeIVs[i].isHidden = false
                 
-                if eventAttendeeIds[i] == userId {
+                if i > eventAttendeeIds.count - 1 {
+                    attendeeIVs[i].layer.borderColor = UIColor.systemGray.cgColor
+                } else {
+                    attendeeIVs[i].layer.borderColor = UIColor(red: 238/255, green: 106/255, blue: 68/255, alpha: 1).cgColor
+                }
+                
+                if memberIds[i] == userId {
                     attendeeIVs[i].image = CurrentUser.currentUser?.profilePic
                 } else {
-                    let imageUrl = CurrentUser.currentUser?.friends?.first(where: { $0.id == eventAttendeeIds[i] })?.picUrl ?? ""
+                    let imageUrl = CurrentUser.currentUser?.friends?.first(where: { $0.id == memberIds[i] })?.picUrl ?? ""
                     
                     attendeeIVs[i].kf.indicatorType = .activity
-                    attendeeIVs[i].kf.setImage(with: URL(string: imageUrl), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+                    attendeeIVs[i].kf.setImage(with: URL(string: imageUrl), placeholder: UIImage(named: "logo_placeholder"), options: [.transition(.fade(1))], completionHandler: { result in
                         switch result {
                         case .success(let value):
-                            CurrentUser.currentUser?.friends?.first(where: { $0.id == self.eventAttendeeIds[i] })?.profilePic = value.image
+                            CurrentUser.currentUser?.friends?.first(where: { $0.id == memberIds[i] })?.profilePic = value.image
                             break
                             
                         case .failure(let error):
                             if !error.isTaskCancelled && !error.isNotCurrentTask {
-                                print("friend: \(self.eventAttendeeIds[i])")
+                                print("friend: \(memberIds[i])")
                                 print("Error getting attendee image: \(error)")
                             }
                             break
@@ -535,10 +581,20 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
                     self.event?.groupId = ""
                     self.event?.organizerId = ""
                     self.event?.attendeeIds = [String]()
+                    self.event?.pendingIds = [String]()
                     
                     CurrentUser.currentUser?.userEvents?[index] = self.event!
                     
                     if self.eventStatus == "invited" {
+                        // Remove current user's user id from group pendingIds array in Firebase.
+                        self.db.collection("groups").document(self.eventGroupId).updateData(["pendingIds": FieldValue.arrayRemove([self.userId!])]) { error in
+                            if let error = error {
+                                print("Error updating group: \(error)")
+                            } else {
+                                print("Group successfully updated")
+                            }
+                        }
+                        
                         self.eventStatus = self.event?.status ?? ""
                         self.swapButtonSet(buttonSetView: self.stdButtonView)
                     }
@@ -546,7 +602,7 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
                     self.updateVisibleButtons(going: false)
                     self.updateCV?()
 
-                    if self.eventAttendeeIds.count > 1 {
+                    if self.eventStatus == "attending" && self.eventAttendeeIds.count > 1 {
                         // Remove current user's user id from group attendeeIds array in Firebase.
                         self.db.collection("groups").document(self.eventGroupId).updateData(["memberIds": FieldValue.arrayRemove([self.userId!])]) { error in
                             if let error = error {
@@ -577,8 +633,18 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
                     self.event?.groupId = ""
                     self.event?.organizerId = ""
                     self.event?.attendeeIds = [String]()
+                    self.event?.pendingIds = [String]()
                     
                     if self.eventStatus == "invited" {
+                        // Remove current user's user id from group pendingIds array in Firebase.
+                        self.db.collection("groups").document(self.eventGroupId).updateData(["pendingIds": FieldValue.arrayRemove([self.userId!])]) { error in
+                            if let error = error {
+                                print("Error updating group: \(error)")
+                            } else {
+                                print("Group successfully updated")
+                            }
+                        }
+                        
                         self.eventStatus = self.event?.status ?? ""
                         self.swapButtonSet(buttonSetView: self.stdButtonView)
                     }
@@ -672,6 +738,9 @@ class DetailsViewController: UIViewController, UIActivityItemSource {
         if let destination = segue.destination as? InviteFriendsViewController {
             // Send selected event and userEvents array to DetailsViewController.
             destination.event = self.event
+            destination.updateEvent = {
+                self.updateGroup = true
+            }
         }
     }
 }

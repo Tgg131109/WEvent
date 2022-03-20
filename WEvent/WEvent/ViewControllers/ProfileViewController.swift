@@ -32,21 +32,31 @@ class ProfileViewController: UIViewController {
     }
     
     @IBAction func signOutBtnTapped(_ sender: UIButton) {
-        // Sign user out of Firebase.
-        do {
-          try Auth.auth().signOut()
-        } catch let signOutError as NSError {
-          print("Error signing out: %@", signOutError)
-        }
+        // Create alert.
+        let alert = UIAlertController(title: "Sign Out?", message: "Are you sure you want to sign out?", preferredStyle: .alert)
+        
+        // Add actions to alert controller.
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        alert.addAction(UIAlertAction(title: "Sign Out", style: .destructive, handler: { action in
+            // Sign user out of Firebase.
+            do {
+              try Auth.auth().signOut()
+            } catch let signOutError as NSError {
+              print("Error signing out: %@", signOutError)
+            }
 
-        // Ensure user is signed out.
-        if FirebaseAuth.Auth.auth().currentUser == nil {
-            CurrentUser.currentUser = nil
-            CurrentLocation.location = nil
-            CurrentLocation.preferredLocation = nil
-            // Dismiss entire tabController and return to SignInViewController.
-            self.dismiss(animated: true, completion: nil)
-        }
+            // Ensure user is signed out.
+            if FirebaseAuth.Auth.auth().currentUser == nil {
+                CurrentUser.currentUser = nil
+                CurrentLocation.location = nil
+                CurrentLocation.preferredLocation = nil
+                // Dismiss entire tabController and return to SignInViewController.
+                self.dismiss(animated: true, completion: nil)
+            }
+        }))
+        
+        // Show alert.
+        self.present(alert, animated: true, completion: nil)
     }
 
     func displayUserData() {

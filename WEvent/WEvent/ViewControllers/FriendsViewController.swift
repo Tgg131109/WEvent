@@ -7,6 +7,7 @@
 
 import UIKit
 import Firebase
+import Kingfisher
 
 class FriendsViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
 

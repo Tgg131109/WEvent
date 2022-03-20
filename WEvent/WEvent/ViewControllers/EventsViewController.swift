@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import Kingfisher
 
 class EventsViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
 
@@ -72,7 +73,7 @@ class EventsViewController: UIViewController, UITableViewDelegate, UITableViewDa
         
         if segCon.selectedSegmentIndex != 0 {
             cell.eventImageIV.kf.indicatorType = .activity
-            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: UIImage(named: "logo_placeholder"), options: [.transition(.fade(1))], completionHandler: { result in
+            cell.eventImageIV.kf.setImage(with: URL(string: event.imageUrl), placeholder: event.image, options: [.transition(.fade(1))], completionHandler: { result in
                 switch result {
                 case .success(let value):
                     dataToShow[indexPath.row].image = value.image
@@ -80,13 +81,19 @@ class EventsViewController: UIViewController, UITableViewDelegate, UITableViewDa
                     
                     switch self.segCon.selectedSegmentIndex {
                     case 1:
-                        self.userPastEvents[indexPath.row].image = value.image
+                        if !self.userPastEvents.isEmpty {
+                            self.userPastEvents[indexPath.row].image = value.image
+                        }
                         break
                     case 2:
-                        self.userSavedEvents[indexPath.row].image = value.image
+                        if !self.userSavedEvents.isEmpty {
+                            self.userSavedEvents[indexPath.row].image = value.image
+                        }
                         break
                     case 3:
-                        self.userInvitedEvents[indexPath.row].image = value.image
+                        if !self.userInvitedEvents.isEmpty {
+                            self.userInvitedEvents[indexPath.row].image = value.image
+                        }
                         break
                     default:
                         break

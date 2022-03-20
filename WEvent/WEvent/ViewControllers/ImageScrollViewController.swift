@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import Kingfisher
 
 class ImageScrollViewController: UIViewController, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, UIScrollViewDelegate {
 
@@ -14,8 +15,10 @@ class ImageScrollViewController: UIViewController, UICollectionViewDelegate, UIC
     @IBOutlet weak var pageCon: UIPageControl!
     
     var scrollView = UIScrollView()
+    var shouldLayout = true
     
     var images: [UIImage]?
+    var imageUrls: [String]?
     var imageCredits: [[String: UIImage]]?
     var imageIndex: IndexPath?
     
@@ -28,10 +31,13 @@ class ImageScrollViewController: UIViewController, UICollectionViewDelegate, UIC
     }
     
     override func viewDidLayoutSubviews() {
-        // Scroll to selected image.
-        imageCV.isPagingEnabled = false
-        imageCV.scrollToItem(at: imageIndex!, at: .centeredHorizontally, animated: false)
-        imageCV.isPagingEnabled = true
+        if shouldLayout {
+            shouldLayout = false
+            // Scroll to selected image.
+            imageCV.isPagingEnabled = false
+            imageCV.scrollToItem(at: imageIndex!, at: .centeredHorizontally, animated: false)
+            imageCV.isPagingEnabled = true
+        }
     }
     
     @IBAction func pageChanged(_ sender: UIPageControl) {
@@ -45,14 +51,14 @@ class ImageScrollViewController: UIViewController, UICollectionViewDelegate, UIC
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         // Update page control.
-        imageOwnerLbl.text = "Posted by \(imageCredits?[pageCon.currentPage].keys.first! ?? "A friend")"
         pageCon.currentPage = Int(scrollView.contentOffset.x) / Int(scrollView.frame.width)
+        imageOwnerLbl.text = "Posted by \(imageCredits?[pageCon.currentPage].keys.first! ?? "A friend")"
     }
 
     func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
         // Update page control.
 //        imageOwnerLbl.text = "Posted by \(imageCredits?[pageCon.currentPage].keys.first! ?? "A friend")"
-        pageCon.currentPage = Int(scrollView.contentOffset.x) / Int(scrollView.frame.width)
+//        pageCon.currentPage = Int(scrollView.contentOffset.x) / Int(scrollView.frame.width)
     }
     
     // MARK: - CollectionView data source
@@ -66,10 +72,15 @@ class ImageScrollViewController: UIViewController, UICollectionViewDelegate, UIC
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "coll_cell_3", for: indexPath) as! ImageCollectionViewCell
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "coll_cell_3", for: indexPath) as! ZoomImageCVCell
+        let img = images![indexPath.row]
         
-        cell.imageIV.image = images![indexPath.row]
-        
+        if img != UIImage(named: "logo_stamp") {
+            cell.imageIV.image = img
+        } else {
+            cell.imageIV.kf.setImage(with: URL(string: imageUrls![indexPath.row]), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: nil)
+        }
+
         return cell
     }
     

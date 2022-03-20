@@ -8,8 +8,16 @@
 import Foundation
 import UIKit
 
+class FloatingLabel: UILabel {
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder:aDecoder)
+        self.layer.cornerRadius = 4
+        self.layer.masksToBounds = true
+    }
+}
+
 class CustomTextField: UITextField {
-    private var __maxLengths = [UITextField: Int]()
+//    private var __maxLengths = [UITextField: Int]()
     
     required init?(coder aDecoder: NSCoder) {
         super.init(coder:aDecoder)

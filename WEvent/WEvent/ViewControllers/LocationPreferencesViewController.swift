@@ -24,6 +24,8 @@ class LocationPreferencesViewController: UIViewController, UITableViewDelegate, 
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        self.hideKeyboardWhenTappedAround()
+        
         headerLbl.text = CurrentLocation.preferredLocation?.city
         locationTF.text = CurrentLocation.preferredLocation?.fullName
         
@@ -122,7 +124,12 @@ class LocationPreferencesViewController: UIViewController, UITableViewDelegate, 
             if currentLocationSW.isOn {
                 CurrentLocation.preferredLocation = CurrentLocation.location
             } else {
-                // Alert user to select a city.
+                // Create alert.
+                let alert = UIAlertController(title: "Location Not Found", message: "The location you have entered cannot be found. Please try another location.", preferredStyle: .alert)
+                // Add action to alert controller.
+                alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                // Show alert.
+                self.present(alert, animated: true, completion: nil)
             }
         }
         

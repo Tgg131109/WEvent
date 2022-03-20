@@ -10,7 +10,7 @@ import CoreLocation
 import Firebase
 import Kingfisher
 
-class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+class HomeViewController: UITableViewController, UITabBarControllerDelegate, CLLocationManagerDelegate, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     
     private let navIconIV = UIImageView(image: UIImage(named: "logo_stamp"))
     
@@ -54,6 +54,8 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
             navIconIV.heightAnchor.constraint(equalToConstant: 30),
             navIconIV.widthAnchor.constraint(equalToConstant: 40)
         ])
+        
+        navigationController?.tabBarController?.delegate = self
         
         docRef = db.collection("users").document(userId!)
         favoritesDelegate = FirebaseHelper()
@@ -105,7 +107,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
             allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()
             userUpcomingEvents = allUserEvents.filter({ $0.status == "attending" && $0.isPast == false })
 
-            // Reload tableView collectionView if events have been added, removed, or updated.
+            // Reload tableView collectionView if events have been added or removed.
             if currentEventCount != actualEventCount || updateCV {
                 DispatchQueue.main.async {
                     self.tableView.reloadData()
@@ -122,6 +124,18 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
     override func scrollViewDidScroll(_ scrollView: UIScrollView) {
         guard let height = navigationController?.navigationBar.frame.height else { return }
         moveAndResizeNavImage(for: height)
+    }
+    
+    func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
+        if tabBarController.selectedIndex == 0 {
+            // Update user's displayed upcoming events if user accepts an event invite from the events tab.
+            if userUpcomingEvents.count != CurrentUser.currentUser?.userEvents?.filter({ $0.status == "attending" && $0.isPast == false }).count {
+                updateCV = true
+            }
+            
+            // Update user's displayed upcoming events to reflect any changes made from the search or events tabs.
+            self.viewWillAppear(true)
+        }
     }
     
     private func getUserLocation() {
@@ -142,7 +156,6 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
         
         geocoder.reverseGeocodeLocation(locations[0]) { (placemarks, error) in
             if (error != nil) {
-                print("error in reverseGeocode")
                 return
             }
             
@@ -179,7 +192,8 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
             snapshot.documentChanges.forEach { diff in
                 let eventData = diff.document.data()
                 guard let eventId = eventData["eventId"] as? String,
-                      let attendeeIds = eventData["memberIds"] as? [String]
+                      let attendeeIds = eventData["memberIds"] as? [String],
+                      let pendingIds = eventData["pendingIds"] as? [String]
                 else {
                     print("There was an error setting event invite data")
                     return
@@ -192,6 +206,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                     // Check if user has event favorited and update status property if so.
                     if let i = CurrentUser.currentUser?.userEvents?.firstIndex(where: { $0.id == eventId }) {
                         CurrentUser.currentUser?.userEvents?[i].attendeeIds = attendeeIds
+                        CurrentUser.currentUser?.userEvents?[i].pendingIds = pendingIds
                     }
                 }
             }
@@ -221,6 +236,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                         if let gDoc = gDoc, gDoc.exists {
                             guard let eventData = gDoc.data(),
                                   let attendeeIds = eventData["memberIds"] as? [String],
+                                  let pendingIds = eventData["pendingIds"] as? [String],
                                   let organizerId = eventData["organizerId"] as? String
                             else {
                                 print("There was an error setting group data from invite")
@@ -233,6 +249,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                                     // Update existing event.
                                     CurrentUser.currentUser?.userEvents?[i].groupId = groupId
                                     CurrentUser.currentUser?.userEvents?[i].attendeeIds = attendeeIds
+                                    CurrentUser.currentUser?.userEvents?[i].pendingIds = pendingIds
                                     CurrentUser.currentUser?.userEvents?[i].organizerId = organizerId
                                     CurrentUser.currentUser?.userEvents?[i].status = "invited"
                                     
@@ -259,7 +276,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                                         }
                                         
                                         // Create Event object and add to events array.
-                                        CurrentUser.currentUser?.userEvents?.append(Event(id: eId, title: title, date: date, address: address, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: UIImage(named: "logo_placeholder")!, groupId: groupId, organizerId: organizerId, attendeeIds: attendeeIds, status: status, isFavorite: false, isCreated: false))
+                                        CurrentUser.currentUser?.userEvents?.append(Event(id: eId, title: title, date: date, address: address, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: UIImage(named: "logo_placeholder")!, groupId: groupId, organizerId: organizerId, attendeeIds: attendeeIds, pendingIds: pendingIds, status: status, isFavorite: false, isCreated: false))
                                         
                                         self.inviteCount += 1
                                         self.navigationController?.tabBarController?.tabBar.items?[2].badgeValue = self.inviteCount > 0 ? "\(self.inviteCount)" : nil
@@ -430,7 +447,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                             let addressStr = "\(address[0]), \(address[1])"
                             let eventImage = UIImage(named: "logo_placeholder")!
        
-                            self.localEvents.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage, groupId: "", organizerId: "", attendeeIds: [String]()))
+                            self.localEvents.append(Event(id: "", title: title, date: dateStr, address: addressStr, link: link, description: description, tickets: tickets, imageUrl: imageUrl, image: eventImage, groupId: "", organizerId: "", attendeeIds: [String](), pendingIds: [String]()))
                         }
                     }
                 }
@@ -526,7 +543,7 @@ class HomeViewController: UITableViewController, CLLocationManagerDelegate, UICo
                     updateEvent = CurrentUser.currentUser?.userEvents?[index]
                 } else {
                     // Create a copy of the event to prevent modifying the underlying data.
-                    updateEvent = Event(id: event.id, title: event.title, date: event.date, address: event.address, link: event.link, description: event.description, tickets: event.tickets, imageUrl: event.imageUrl, image: event.image, groupId: event.groupId, organizerId: event.organizerId, attendeeIds: event.attendeeIds)
+                    updateEvent = Event(id: event.id, title: event.title, date: event.date, address: event.address, link: event.link, description: event.description, tickets: event.tickets, imageUrl: event.imageUrl, image: event.image, groupId: event.groupId, organizerId: event.organizerId, attendeeIds: event.attendeeIds, pendingIds: event.pendingIds)
                 }
                 
                 self.favoritesDelegate.setFavorite(event: updateEvent!, isFav: !favButton.isSelected)

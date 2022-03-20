@@ -25,6 +25,8 @@ class UpdateInformationViewController: UIViewController, UIImagePickerController
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        self.hideKeyboardWhenTappedAround()
+        
         if CurrentUser.currentUser != nil {
             picIV.image = CurrentUser.currentUser?.profilePic
             fNameTF.text = CurrentUser.currentUser?.firstName

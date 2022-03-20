@@ -23,6 +23,7 @@ class Event {
     var groupId: String
     var organizerId: String
     var attendeeIds: [String]
+    var pendingIds: [String]
     var status: String
     var isFavorite: Bool
     var isCreated: Bool
@@ -30,38 +31,36 @@ class Event {
     // Computed property.
     var dateStamp: Double {
         get {
-            let dateFormatter = DateFormatter()
-            // Get 3 letter month and day from saved date.
-            let dateArray = date.split(separator: "|")
-            var completeDate = ""
-            
-            if isCreated || dateArray[0].count > 8{
-                dateFormatter.dateFormat = "MMM dd yyyy hh:mm a"
-                completeDate = date.replacingOccurrences(of: " |", with: "")
-            } else {
-                dateFormatter.dateFormat = "MMM dd yyyy"
-                let year = Calendar(identifier: .gregorian).dateComponents([.year], from: Date()).year
-                completeDate = "\(dateArray[0]) \(year ?? 0000)"
-            }
-            
-            let dateStr = dateFormatter.date(from: completeDate)
-            
-            if let timestamp = dateStr?.timeIntervalSince1970 {
-                return timestamp
-            } else {
-                return -1.1
-            }
+            return getDateStr().timeIntervalSince1970
         }
     }
     
     var isPast: Bool {
         get {
-            return Date().timeIntervalSince1970 > dateStamp
+            return Date().timeIntervalSince1970 > getDateStr().addingTimeInterval(86400).timeIntervalSince1970
         }
     }
     
+    func getDateStr() -> Date {
+        let dateFormatter = DateFormatter()
+        // Get 3 letter month and day from saved date.
+        let dateArray = date.split(separator: "|")
+        var completeDate = ""
+        
+        if isCreated || dateArray[0].count > 8{
+            dateFormatter.dateFormat = "MMM dd yyyy hh:mm a"
+            completeDate = date.replacingOccurrences(of: " |", with: "")
+        } else {
+            dateFormatter.dateFormat = "MMM dd yyyy"
+            let year = Calendar(identifier: .gregorian).dateComponents([.year], from: Date()).year
+            completeDate = "\(dateArray[0]) \(year ?? 0000)"
+        }
+        
+        return dateFormatter.date(from: completeDate)!
+    }
+    
     // Initializer.
-    init(id: String, title: String, date: String, address: String, link:String, description: String, tickets: [[String: Any]], imageUrl: String, image: UIImage, groupId: String, organizerId: String, attendeeIds: [String], status: String? = "", isFavorite: Bool? = false, isCreated: Bool? = false) {
+    init(id: String, title: String, date: String, address: String, link:String, description: String, tickets: [[String: Any]], imageUrl: String, image: UIImage, groupId: String, organizerId: String, attendeeIds: [String], pendingIds: [String], status: String? = "", isFavorite: Bool? = false, isCreated: Bool? = false) {
         self.id = id
         self.title = title
         self.date = date
@@ -74,6 +73,7 @@ class Event {
         self.groupId = groupId
         self.organizerId = organizerId
         self.attendeeIds = attendeeIds
+        self.pendingIds = pendingIds
         self.status = status!
         self.isFavorite = isFavorite!
         self.isCreated = isCreated!
