@@ -58,7 +58,7 @@ class SignUpViewController: UIViewController, UIImagePickerControllerDelegate, U
         }
         
         // Validate email.
-        if !email.contains("@") {
+        if !self.isValidEmail(testStr: email) {
             // Set alert title and message.
             alert.title = "Invalid Email"
             alert.message = "The email that you have entered is invalid. Please enter a valid email address and try again."
@@ -236,5 +236,13 @@ class SignUpViewController: UIViewController, UIImagePickerControllerDelegate, U
             
             picIV.image = scaledImg
         }
+    }
+    
+    func isValidEmail(testStr:String) -> Bool {
+        let emailRegEx = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,4}"
+        if let emailTest = NSPredicate(format:"SELF MATCHES %@", emailRegEx) as NSPredicate? {
+            return emailTest.evaluate(with: testStr)
+        }
+        return false
     }
 }

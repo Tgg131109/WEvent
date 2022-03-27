@@ -448,6 +448,9 @@
                                         <buttonConfiguration key="configuration" style="plain" title="Click Here">
                                             <fontDescription key="titleFontDescription" type="system" weight="semibold" pointSize="17"/>
                                         </buttonConfiguration>
+                                        <connections>
+                                            <action selector="forgotPasswordBtnTapped:" destination="0gt-4k-YBU" eventType="touchUpInside" id="sA5-dZ-fGD"/>
+                                        </connections>
                                     </button>
                                 </subviews>
                                 <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
@@ -598,11 +601,9 @@
                         <outlet property="activityView" destination="zjt-22-6fT" id="txE-yD-4BH"/>
                         <outlet property="emailField" destination="TAH-gO-KkY" id="iCf-Dk-Tcc"/>
                         <outlet property="facebookBtn" destination="4gm-Po-nun" id="1fF-N7-QOi"/>
-                        <outlet property="forgotPasswordBtn" destination="Obw-EV-6Yl" id="UkY-gK-zmR"/>
                         <outlet property="googleBtn" destination="kvM-2E-IWU" id="q85-tJ-u4V"/>
                         <outlet property="passwordField" destination="PzQ-2M-DUl" id="PRJ-zE-g3o"/>
                         <outlet property="signInBtn" destination="jfp-h8-QAV" id="7i0-Wv-q5S"/>
-                        <outlet property="signUpBtn" destination="1fS-nT-TeL" id="Jut-ok-Au9"/>
                         <segue destination="4QP-Ti-qlM" kind="presentation" identifier="goToHome" modalPresentationStyle="fullScreen" id="uZP-lq-gmH"/>
                     </connections>
                 </viewController>
@@ -3275,11 +3276,18 @@
                             <constraint firstItem="cwL-s5-Y7l" firstAttribute="top" secondItem="Fnx-4Y-CKO" secondAttribute="top" id="yek-KU-QYh"/>
                         </constraints>
                     </view>
-                    <navigationItem key="navigationItem" id="uMW-k6-J2e"/>
+                    <navigationItem key="navigationItem" id="uMW-k6-J2e">
+                        <barButtonItem key="rightBarButtonItem" systemItem="trash" id="KwV-wr-FdF">
+                            <connections>
+                                <action selector="trashBtnTapped:" destination="tZZ-JW-Ayf" id="616-h5-dKH"/>
+                            </connections>
+                        </barButtonItem>
+                    </navigationItem>
                     <connections>
                         <outlet property="imageCV" destination="cwL-s5-Y7l" id="R6j-6N-oni"/>
                         <outlet property="imageOwnerLbl" destination="86E-PB-zSF" id="CVy-kA-30l"/>
                         <outlet property="pageCon" destination="0gB-QD-knw" id="avQ-zn-wLf"/>
+                        <outlet property="trashButton" destination="KwV-wr-FdF" id="3wh-1B-xX0"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="JQP-8f-Bpl" sceneMemberID="firstResponder"/>

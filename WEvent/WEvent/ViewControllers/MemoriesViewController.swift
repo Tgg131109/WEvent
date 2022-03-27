@@ -20,16 +20,12 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
     let userId = Auth.auth().currentUser?.uid
     var collRef: CollectionReference?
     
-    var images = [UIImage]()
-    var imageUrls = [String]()
-    var imageAssocs = [Int]()
-    var imageCredits = [[String: UIImage]]()
+    var imgs = [Image]()
     
     var eventId: String?
     var eventTitle: String?
     var eventGroupId: String?
     var eventAttendeeIds: [String]?
-    var memberProfilePics = [UIImage]()
     var urlCount = 0
     var userUrls = [String]()
     var selectedIP = IndexPath()
@@ -52,16 +48,6 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
         super.viewWillAppear(animated)
         
         if getPhotos {
-            if eventAttendeeIds != nil {
-                for memberId in eventAttendeeIds! {
-                    if memberId == userId {
-                        memberProfilePics.append(CurrentUser.currentUser?.profilePic ?? UIImage(named: "logo_stamp")!)
-                    } else {
-                        memberProfilePics.append(CurrentUser.currentUser?.friends?.first(where: { $0.id == memberId })?.profilePic ?? UIImage(named: "logo_stamp")!)
-                    }
-                }
-            }
-            
             collRef = db.collection("groups").document(eventGroupId!).collection("images")
             getImagesFromStorage()
         }
@@ -167,20 +153,9 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
                     }
                     
                     for urlStr in userImages {
-                        self.imageUrls.append(urlStr)
-                        self.images.append(UIImage(named: "logo_stamp")!)
+                        self.imgs.append(Image(imgUrl: urlStr, userId: id))
                         
-                        if id == self.userId {
-                            self.imageCredits.append(["You": UIImage(named: "logo_stamp")!])
-                        } else {
-                            self.imageCredits.append([CurrentUser.currentUser?.friends?.first(where: { $0.id == id })?.firstName ?? "A friend": UIImage(named: "logo_stamp")!])
-                        }
-                        
-                        if let i = self.eventAttendeeIds?.firstIndex(where: { $0 == id }) {
-                            self.imageAssocs.append(i)
-                        }
-                        
-                        if !self.images.isEmpty {
+                        if !self.imgs.isEmpty {
                             self.msgLbl.isHidden = true
                         }
                         
@@ -208,18 +183,22 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
         let scaledImg = image.scalePreservingAspectRatio(targetSize: targetSize)
         let imageData = scaledImg.pngData()
         
-        self.images.append(scaledImg)
-        self.imageCredits.append(["You": scaledImg])
+        self.imgs.append(Image(image: scaledImg, imgUrl: "", userId: self.userId!))
         
-        if let i = self.eventAttendeeIds?.firstIndex(where: { $0 == userId }) {
-            self.imageAssocs.append(i)
-        }
+//        self.images.append(scaledImg)
+//        self.imageCredits.append(["You": scaledImg])
+        
+//        if let i = self.eventAttendeeIds?.firstIndex(where: { $0 == userId }) {
+//            self.imageAssocs.append(i)
+//        }
         
         DispatchQueue.main.async {
             self.mediaCV.reloadData()
         }
         
-        self.msgLbl.isHidden = !self.images.isEmpty
+        self.msgLbl.isHidden = !self.imgs.isEmpty
+        
+//        self.msgLbl.isHidden = !self.images.isEmpty
       
         let fileName = "\(UUID().uuidString).png"
         
@@ -234,8 +213,9 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
                 storageRef.downloadURL { url, error in
                     if let url = url {
                         self.urlCount += 1
+                        self.imgs.first(where: { $0.imgUrl == "" })?.imgUrl = url.absoluteString
                         self.userUrls.append(url.absoluteString)
-                        self.imageUrls.append(url.absoluteString)
+//                        self.imageUrls.append(url.absoluteString)
                         
                         if self.urlCount == imgCount {
                             // Add image url strings to Firebase event or merge data if document already exists.
@@ -265,22 +245,26 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
     }
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return images.count
+        return imgs.count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "coll_cell_2", for: indexPath) as! ImageCollectionViewCell
 
-        if imageUrls.count > indexPath.row {
+//        if imgs.count > indexPath.row {
+//        if imageUrls.count > indexPath.row {
             cell.imageIV.kf.indicatorType = .activity
-            cell.imageIV.kf.setImage(with: URL(string: imageUrls[indexPath.row]), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
+            cell.imageIV.kf.setImage(with: URL(string: imgs[indexPath.row].imgUrl), placeholder: imgs[indexPath.row].image == nil ? UIImage(named: "logo_stamp") : imgs[indexPath.row].image, options: [.transition(.fade(1))], completionHandler: { result in
+//            cell.imageIV.kf.setImage(with: URL(string: imageUrls[indexPath.row]), placeholder: UIImage(named: "logo_stamp"), options: [.transition(.fade(1))], completionHandler: { result in
                 switch result {
                 case .success(let value):
-                    self.images[indexPath.row] = value.image
+                    self.imgs[indexPath.row].image = value.image
                     
-                    let keys = self.imageCredits[indexPath.row].keys
-                    
-                    self.imageCredits[indexPath.row][keys.first!] = value.image
+//                    self.images[indexPath.row] = value.image
+//
+//                    let keys = self.imageCredits[indexPath.row].keys
+//
+//                    self.imageCredits[indexPath.row][keys.first!] = value.image
                     break
                     
                 case .failure(let error):
@@ -291,11 +275,12 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
                 }
             })
             
-            cell.userIV.image = memberProfilePics[imageAssocs[indexPath.row]]
-        } else {
-            cell.imageIV.image = images[indexPath.row]
-            cell.userIV.image = CurrentUser.currentUser?.profilePic
-        }
+        cell.userIV.image = imgs[indexPath.row].userProfilePic
+//            cell.userIV.image = memberProfilePics[imageAssocs[indexPath.row]]
+//        } else {
+//            cell.imageIV.image = images[indexPath.row]
+//            cell.userIV.image = CurrentUser.currentUser?.profilePic
+//        }
         
         if collectionView.numberOfItems(inSection: 0) > 0 && !activityView.isHidden {
             activityView.isHidden = true
@@ -332,10 +317,17 @@ class MemoriesViewController: UIViewController, PHPickerViewControllerDelegate, 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if let destination = segue.destination as? ImageScrollViewController {
             // Send selected event and userEvents array to DetailsViewController.
-            destination.images = self.images
-            destination.imageUrls = self.imageUrls
-            destination.imageCredits = self.imageCredits
+            destination.imgs = self.imgs
             destination.imageIndex = self.selectedIP
+            destination.userId = self.userId
+            destination.eventId = self.eventId
+            destination.eventGroupId = self.eventGroupId
+            destination.updateCV = { urlStr in
+                self.imgs.removeAll(where: { $0.imgUrl == urlStr })
+                self.userUrls.removeAll(where: { $0 == urlStr })
+                print("removing on memories page")
+                self.mediaCV.reloadData()
+            }
             
             self.getPhotos = false
         }

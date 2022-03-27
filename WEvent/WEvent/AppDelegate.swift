@@ -17,7 +17,29 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         FirebaseApp.configure()
         
-        // Override point for customization after application launch.
+        // Check if this is the app's first launch after it has been reinstalled.
+        let userDefaults = UserDefaults.standard
+        
+        if !userDefaults.bool(forKey: "hasBeenLaunched") {
+            print("Launching app for the first time.")
+            
+            // Attempt to sign the previously signed in user out of Firebase.
+            do {
+              try Auth.auth().signOut()
+            } catch let signOutError as NSError {
+              print("Error signing out: %@", signOutError)
+            }
+
+            // Ensure user is signed out.
+            if FirebaseAuth.Auth.auth().currentUser == nil {
+                CurrentUser.currentUser = nil
+                CurrentLocation.location = nil
+                CurrentLocation.preferredLocation = nil
+            }
+        } else {
+            print("Launching app again.")
+        }
+        
         return true
     }
 
