@@ -23,6 +23,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         if !userDefaults.bool(forKey: "hasBeenLaunched") {
             print("Launching app for the first time.")
             
+            // Update user defaults.
+            userDefaults.set(true, forKey: "hasBeenLaunched")
+            
             // Attempt to sign the previously signed in user out of Firebase.
             do {
               try Auth.auth().signOut()

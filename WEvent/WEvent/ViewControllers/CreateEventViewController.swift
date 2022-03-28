@@ -54,7 +54,7 @@ class CreateEventViewController: UIViewController, UIImagePickerControllerDelega
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        self.hideKeyboardWhenTappedAround()
+//        self.hideKeyboardWhenTappedAround()
         
         docRef = db.collection("users").document(userId!)
         allUserEvents = CurrentUser.currentUser?.userEvents ?? [Event]()

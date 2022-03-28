@@ -17,6 +17,7 @@ class LocationPreferencesViewController: UIViewController, UITableViewDelegate, 
     @IBOutlet weak var suggestionTableView: UITableView!
     @IBOutlet weak var saveButton: UIButton!
     
+    let userId = Auth.auth().currentUser?.uid
     var locations = [Location]()
     var filteredLocations = [Location]()
     var selectedCity: Location?
@@ -24,12 +25,12 @@ class LocationPreferencesViewController: UIViewController, UITableViewDelegate, 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        self.hideKeyboardWhenTappedAround()
+//        self.hideKeyboardWhenTappedAround()
         
         headerLbl.text = CurrentLocation.preferredLocation?.city
         locationTF.text = CurrentLocation.preferredLocation?.fullName
         
-        if let useCurrentLocation = UserDefaults.standard.object(forKey: "useCurrentLocation") as? Bool {
+        if let useCurrentLocation = UserDefaults.standard.object(forKey: "\(userId!)useCurrentLocation") as? Bool {
             currentLocationSW.isOn = useCurrentLocation
             
             if !useCurrentLocation {
@@ -107,7 +108,6 @@ class LocationPreferencesViewController: UIViewController, UITableViewDelegate, 
     }
     
     @IBAction func savePreferences(_ sender: UIButton) {
-        let userId = Auth.auth().currentUser?.uid
         // Check that provided city is set.
         if !currentLocationSW.isOn && selectedCity != nil {
             CurrentLocation.preferredLocation = selectedCity
